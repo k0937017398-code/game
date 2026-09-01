@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學嗒寶：符號大戰 (電競升級版)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0; color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            background: linear-gradient(-45deg, #020617, #1e1b4b, #083344, #312e81, #0f172a);
+            background-size: 400% 400%; animation: sciFiBG 15s ease infinite;
+        }
+        @keyframes sciFiBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        /* 背景漂浮小白點特效 */
+        #star-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: hidden; }
+        .star {
+            position: absolute; background-color: #ffffff; border-radius: 50%;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.8); opacity: 0; animation: twinkle linear infinite;
+        }
+        @keyframes twinkle { 0% { opacity: 0; transform: scale(0.5) translateY(0); } 50% { opacity: 1; transform: scale(1.2) translateY(-15px); } 100% { opacity: 0; transform: scale(0.5) translateY(-30px); } }
+
+        /* 老師控制台 (左上角懸浮) */
+        #teacher-console {
+            position: fixed; top: 15px; left: 15px; z-index: 2000;
+            background: rgba(15, 23, 42, 0.85); border: 2px solid #64748b; border-radius: 12px;
+            padding: 10px 15px; color: white; backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 150px; height: 45px; overflow: hidden; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #teacher-console:hover { width: 340px; height: auto; border-color: #fbbf24; }
+        .tc-header { font-weight: bold; color: #94a3b8; font-size: 1rem; margin-bottom: 15px; white-space: nowrap; cursor: default; }
+        #teacher-console:hover .tc-header { color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.5); }
+        .tc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        #teacher-console:hover .tc-grid { opacity: 1; pointer-events: auto; }
+        .tc-btn {
+            background: #1e293b; color: white; border: 1px solid #475569; border-radius: 6px;
+            padding: 8px; cursor: pointer; font-size: 0.95rem; font-weight: bold; transition: all 0.2s;
+        }
+        .tc-btn:hover { background: #334155; transform: scale(1.05); }
+        .tc-btn.red { border-color: #ef4444; color: #fca5a5; }
+        .tc-btn.blue { border-color: #3b82f6; color: #93c5fd; }
+        .tc-btn.gold { border-color: #fbbf24; color: #fde047; }
+        .tc-btn.green { border-color: #22c55e; color: #86efac; }
+        .tc-btn:active { transform: scale(0.95); }
+
+        /* 頂部計分板與計時器 */
+        #header {
+            display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; 
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,255,255,0.1);
+            z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.1); padding-left: 180px; /* 避開控制台 */
+        }
+        .score { font-size: 2.5rem; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        #score-alpha { color: #f87171; text-shadow: 0 0 10px #f87171; }
+        #score-beta { color: #60a5fa; text-shadow: 0 0 10px #60a5fa; }
+        .score-val { display: inline-block; transition: all 0.1s; }
+        #timer { font-size: 3.5rem; font-weight: bold; color: #2dd4bf; text-shadow: 0 0 15px #2dd4bf; font-variant-numeric: tabular-nums; transition: color 0.3s; }
+        #timer.paused { color: #ef4444; text-shadow: 0 0 15px #ef4444; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        /* 遊戲區域 */
+        #game-area { flex: 1; display: flex; justify-content: space-evenly; align-items: center; position: relative; padding: 20px; z-index: 5; }
+        .card {
+            width: 65vh; height: 65vh; max-width: 45vw; max-height: 45vw; background-color: white; border-radius: 50%; 
+            position: relative; box-shadow: 0 0 40px rgba(255, 255, 255, 0.2), inset 0 0 20px rgba(0,0,0,0.1); border: 8px solid #cbd5e1; overflow: hidden; 
+        }
+        .symbol {
+            position: absolute; transform-origin: center center; display: flex; justify-content: center; align-items: center;
+            font-size: min(4vw, 4vh); font-weight: 900; cursor: pointer; user-select: none; white-space: nowrap; transition: filter 0.1s; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); z-index: 10;
+        }
+        .symbol:hover { filter: brightness(0.7); }
+        .symbol u { text-decoration-color: red; text-decoration-thickness: 4px; }
+
+        /* 底部搶答按鈕 */
+        #controls { display: flex; height: 120px; background: rgba(15, 23, 42, 0.8); z-index: 10; backdrop-filter: blur(5px); }
+        .buzzer { flex: 1; font-size: 2.5rem; font-weight: bold; border: none; cursor: pointer; transition: all 0.2s; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); text-transform: uppercase; letter-spacing: 2px; }
+        #btn-alpha { background-color: rgba(220, 38, 38, 0.8); box-shadow: inset 0 0 20px rgba(255,0,0,0.5); }
+        #btn-beta { background-color: rgba(37, 99, 235, 0.8); box-shadow: inset 0 0 20px rgba(0,100,255,0.5); }
+        .buzzer:active { transform: scale(0.98); }
+        .buzzer:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+        .buzzer.active { background-color: #22c55e !important; box-shadow: 0 0 30px #22c55e inset !important; animation: pulse 1s infinite; }
+        .buzzer.frozen { background-color: #475569 !important; color: #94a3b8; pointer-events: none; text-shadow: none; box-shadow: none;}
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+        @keyframes scorePop { 0% { transform: scale(1); } 50% { transform: scale(2.5); color: #fff; text-shadow: 0 0 20px #fff; } 100% { transform: scale(1); } }
+        .pop { animation: scorePop 0.6s ease-out; }
+
+        /* 中央巨大答對特效文字 */
+        #correct-popup {
+            display: none; position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 6rem; font-weight: 900; color: #fbbf24; text-align: center;
+            text-shadow: 0 0 50px rgba(251,191,36,0.8), 0 0 20px #fff, 5px 5px 0px rgba(0,0,0,0.5);
+            z-index: 1000; pointer-events: none; white-space: nowrap; line-height: 1.2;
+        }
+
+        /* 開始與結算畫面 */
+        #overlay, #result-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
+        }
+        #overlay { background: rgba(2, 6, 23, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .title-glow { font-size: 4.5rem; margin-bottom: 10px; color: #fbbf24; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5), 0 0 40px rgba(251, 191, 36, 0.3); letter-spacing: 5px; }
+        .time-buttons { display: flex; gap: 20px; margin-top: 30px; }
+        .time-btn { padding: 15px 40px; font-size: 1.8rem; background: transparent; color: #38bdf8; border: 2px solid #38bdf8; border-radius: 12px; cursor: pointer; font-weight: bold; text-shadow: 0 0 8px rgba(56, 189, 248, 0.8); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3) inset, 0 0 15px rgba(56, 189, 248, 0.3); transition: all 0.3s ease; }
+        .time-btn:hover { background: #38bdf8; color: #020617; box-shadow: 0 0 30px #38bdf8; transform: translateY(-5px); }
+        
+        #result-overlay { display: none; z-index: 200; }
+        .result-half { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; overflow: hidden; transition: opacity 0.5s; }
+        #result-alpha { background: rgba(220, 38, 38, 0.85); backdrop-filter: blur(8px); border-right: 5px solid #fbbf24; }
+        #result-beta { background: rgba(37, 99, 235, 0.85); backdrop-filter: blur(8px); }
+        .result-team { font-size: 4rem; font-weight: bold; margin-bottom: 20px; text-shadow: 0 0 15px rgba(0,0,0,0.8); }
+        .result-score-final { font-size: 10rem; font-weight: 900; text-shadow: 0 0 30px rgba(255,255,255,0.6); }
+        .winner-text { font-size: 5rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 40px #fbbf24, 0 0 20px #fff; animation: winnerBounce 0.8s infinite alternate; margin-top: 30px; display: none; text-transform: uppercase; letter-spacing: 5px; }
+        @keyframes winnerBounce { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.1) translateY(-20px); text-shadow: 0 0 60px #fbbf24, 0 0 30px #fff; } }
+        .restart-btn { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 201; padding: 15px 50px; font-size: 2rem; background: #22c55e; color: white; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 0 30px rgba(34, 197, 94, 0.8); transition: transform 0.2s; }
+        .restart-btn:hover { transform: translateX(-50%) scale(1.1); background: #16a34a; }
+    </style>
+</head>
+<body>
+
+    <div id="star-container"></div>
+
+    <!-- 老師控制台 -->
+    <div id="teacher-console">
+        <div class="tc-header">⚙️ 老師控制台 (移入展開)</div>
+        <div class="tc-grid">
+            <button class="tc-btn gold" id="btn-pause" onclick="tCtrlPause()">⏸ 暫停計時</button>
+            <button class="tc-btn gold" onclick="tCtrlHint()">🎯 提示答案</button>
+            <button class="tc-btn red" onclick="tCtrlScore('alpha', 10)">天團 ➕ 10</button>
+            <button class="tc-btn red" onclick="tCtrlScore('alpha', -5)">天團 ➖ 5</button>
+            <button class="tc-btn blue" onclick="tCtrlScore('beta', 10)">艦隊 ➕ 10</button>
+            <button class="tc-btn blue" onclick="tCtrlScore('beta', -5)">艦隊 ➖ 5</button>
+            <button class="tc-btn green" style="grid-column: span 2;" onclick="tCtrlSkip()">🔄 強制換題 (跳過動畫)</button>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1 class="title-glow">數學嗒寶：符號大戰</h1>
+        <p style="font-size: 1.5rem; margin-bottom: 10px; text-align: center; line-height: 1.8; color: #cbd5e1;">
+            <span style="color: #f87171; font-weight: bold;">幾何天團 (按 A)</span> VS <span style="color: #60a5fa; font-weight: bold;">代數艦隊 (按 L)</span><br>
+            按下搶答，找出兩張牌上唯一的相同符號！
+        </p>
+        <div class="time-buttons">
+            <button class="time-btn" onclick="startGame(180)">3 分鐘</button>
+            <button class="time-btn" onclick="startGame(300)">5 分鐘</button>
+            <button class="time-btn" onclick="startGame(420)">7 分鐘</button>
+        </div>
+    </div>
+
+    <div id="header">
+        <div id="score-alpha" class="score">幾何天團: <span id="val-alpha" class="score-val">0</span></div>
+        <div id="timer">00:00</div>
+        <div id="score-beta" class="score">代數艦隊: <span id="val-beta" class="score-val">0</span></div>
+    </div>
+
+    <div id="game-area">
+        <div id="card1" class="card"></div>
+        <div id="card2" class="card"></div>
+    </div>
+
+    <!-- 巨大答對特效文字 -->
+    <div id="correct-popup"></div>
+
+    <div id="controls">
+        <button id="btn-alpha" class="buzzer" onclick="buzz('alpha')">幾何天團 搶答 (A)</button>
+        <button id="btn-beta" class="buzzer" onclick="buzz('beta')">代數艦隊 搶答 (L)</button>
+    </div>
+
+    <div id="result-overlay">
+        <div id="result-alpha" class="result-half"><div class="result-team">幾何天團</div><div class="result-score-final" id="final-score-alpha">0</div><div class="winner-text" id="winner-alpha">🏆 稱霸全場 🏆</div></div>
+        <div id="result-beta" class="result-half"><div class="result-team">代數艦隊</div><div class="result-score-final" id="final-score-beta">0</div><div class="winner-text" id="winner-beta">🏆 稱霸全場 🏆</div></div>
+        <button class="restart-btn" onclick="location.reload()">再戰一局</button>
+    </div>
+
+    <script>
+        function initStars() {
+            const container = document.getElementById('star-container');
+            for (let i = 0; i < 70; i++) {
+                let star = document.createElement('div'); star.className = 'star';
+                let size = Math.random() * 3 + 1; star.style.width = size + 'px'; star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + 'vw'; star.style.top = Math.random() * 100 + 'vh';
+                star.style.animationDuration = (Math.random() * 4 + 2) + 's'; star.style.animationDelay = (Math.random() * 5) + 's';
+                container.appendChild(star);
+            }
+        }
+        initStars(); 
+
+        const symbols = [
+            "a²+b²=c²", "x=(-b±√)/2a", "(a+b)²", "(a-b)²", "a²-b²", "y=ax+b", "y=ax²+c", "y=kx", "xy=k", "x>0",
+            "x<0", "|-5|=5", "√a×√b", "a×10ⁿ", "x:y:z", "//", "<u>⊥</u>", "≅", "∼", "π",
+            "½bh", "πr²", "2πr", "πr²×θ/360", "180°(n-2)", "△", "□", "○", "∠", "<u>∵</u>",
+            "<u>∴</u>", "∪", "∩", "∅", "∞", "x", "y", "z", "a", "b",
+            "=", "≠", "≈", "Q₁", "Q₂", "Q₃", "P(A)", "x̄", "(x,y)", "O(外心)",
+            "I(內心)", "G(重心)", "sinθ", "cosθ", "tanθ", "90°", "180°"
+        ]; 
+
+        const n = 7; const cards = [];
+        let card0 = []; for(let i=0; i<=n; i++) card0.push(i); cards.push(card0);
+        for(let j=0; j<n; j++) { let card = [0]; for(let k=0; k<n; k++) card.push(n + 1 + j * n + k); cards.push(card); }
+        for(let i=0; i<n; i++) { for(let j=0; j<n; j++) { let card = [i + 1]; for(let k=0; k<n; k++) card.push(n + 1 + k * n + ((i * k + j) % n)); cards.push(card); } }
+
+        let scoreAlpha = 0, scoreBeta = 0;
+        let timeLeft = 0, gameInterval, currentMatch = null, activeTeam = null;
+        let freezeAlpha = false, freezeBeta = false, answerTimeout = null, roundDelayTimer = null;
+        let isAnimating = false, isPaused = false;
+        const colors = ['#000000', '#dc2626', '#2563eb', '#16a34a', '#9333ea', '#d97706'];
+
+        let audioCtx;
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            if (type === 'correct') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); 
+                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); osc.frequency.setValueAtTime(1046.50, audioCtx.currentTime + 0.3); 
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.8);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            }
+        }
+
+        // --- 產生粒子爆散 ---
+        function explodeParticles(x, y) {
+            const explodeColors = ['#fbbf24', '#f59e0b', '#ffffff', '#fef08a'];
+            for(let i=0; i<45; i++) {
+                let p = document.createElement('div');
+                p.style.position = 'fixed'; p.style.left = x + 'px'; p.style.top = y + 'px';
+                let size = Math.random()*8 + 4;
+                p.style.width = size + 'px'; p.style.height = size + 'px';
+                p.style.backgroundColor = explodeColors[Math.floor(Math.random()*explodeColors.length)];
+                p.style.borderRadius = '50%'; p.style.pointerEvents = 'none'; p.style.zIndex = '999';
+                p.style.boxShadow = `0 0 15px ${p.style.backgroundColor}`;
+                document.body.appendChild(p);
+
+                let angle = Math.random() * Math.PI * 2;
+                let velocity = Math.random() * 200 + 50;
+                let tx = Math.cos(angle) * velocity; let ty = Math.sin(angle) * velocity;
+
+                let anim = p.animate([
+                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 },
+                    { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 }
+                ], { duration: 600 + Math.random()*500, easing: 'cubic-bezier(0.17, 0.89, 0.32, 1)' });
+                anim.onfinish = () => p.remove();
+            }
+        }
+
+        function renderCard(container, cardData) {
+            container.innerHTML = '';
+            let shuffledData = [...cardData].sort(() => Math.random() - 0.5);
+            let placedPositions = []; 
+
+            shuffledData.forEach((symId, idx) => {
+                let el = document.createElement('div'); el.className = 'symbol';
+                el.dataset.sym = symId; // ★ 紀錄 ID，方便對照特效
+                let textStr = symbols[symId]; el.innerHTML = textStr;
+                
+                let plainTextLen = textStr.replace(/<[^>]*>?/gm, '').length;
+                let maxScale = 1.6, minScale = 1.1;
+                if (plainTextLen > 4) { maxScale = 1.2; minScale = 0.9; } 
+                if (plainTextLen > 8) { maxScale = 1.0; minScale = 0.75; } 
+
+                let x, y, angle, r, isValid = false, attempts = 0;
+                while (!isValid && attempts < 50) {
+                    r = Math.random() * 38; angle = Math.random() * 360 * Math.PI / 180;
+                    x = 50 + r * Math.cos(angle); y = 50 + r * Math.sin(angle);
+                    isValid = true;
+                    for (let pos of placedPositions) {
+                        let dist = Math.sqrt(Math.pow(pos.x - x, 2) + Math.pow(pos.y - y, 2));
+                        if (dist < 20) { isValid = false; break; }
+                    }
+                    attempts++;
+                }
+                placedPositions.push({x: x, y: y});
+
+                let scale = minScale + Math.random() * (maxScale - minScale); 
+                let rot = Math.random() * 360; 
+                
+                el.style.left = `${x}%`; el.style.top = `${y}%`;
+                el.style.transform = `translate(-50%, -50%) rotate(${rot}deg) scale(${scale})`;
+                el.style.color = colors[Math.floor(Math.random() * colors.length)];
+                el.onclick = (e) => checkAnswer(symId, e.currentTarget);
+                container.appendChild(el);
+            });
+        }
+
+        function startGame(seconds) {
+            initAudio(); document.getElementById('overlay').style.display = 'none';
+            timeLeft = seconds; scoreAlpha = 0; scoreBeta = 0;
+            updateScores(); nextRound();
+            let m = Math.floor(timeLeft / 60); let s = timeLeft % 60;
+            document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            gameInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            if (isPaused) return; // 暫停機制
+            timeLeft--;
+            let m = Math.floor(timeLeft / 60); let s = timeLeft % 60;
+            document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (timeLeft <= 0) showGameOver(); 
+        }
+
+        function nextRound() {
+            let idx1 = Math.floor(Math.random() * cards.length); let idx2 = Math.floor(Math.random() * cards.length);
+            while(idx2 === idx1) idx2 = Math.floor(Math.random() * cards.length);
+            let c1 = cards[idx1]; let c2 = cards[idx2];
+            currentMatch = c1.find(s => c2.includes(s));
+            renderCard(document.getElementById('card1'), c1); renderCard(document.getElementById('card2'), c2);
+            activeTeam = null; clearTimeout(answerTimeout); updateBuzzerUI();
+        }
+
+        function buzz(team) {
+            initAudio(); 
+            if (isPaused || isAnimating || activeTeam) return; 
+            if (team === 'alpha' && freezeAlpha) return; if (team === 'beta' && freezeBeta) return;
+            activeTeam = team; updateBuzzerUI(); answerTimeout = setTimeout(() => { handleWrongAnswer(); }, 5000);
+        }
+
+        // --- 核心：核彈級特效與延遲 ---
+        function checkAnswer(symId, targetEl) {
+            if (!activeTeam || isAnimating || isPaused) {
+                let btnArea = document.getElementById('controls'); btnArea.style.border = "5px solid #2dd4bf";
+                setTimeout(() => btnArea.style.border = "none", 300); return; 
+            }
+            clearTimeout(answerTimeout);
+            
+            if (symId === currentMatch) {
+                isAnimating = true; // 鎖定操作
+                playSound('correct'); 
+                
+                let scoreEl = (activeTeam === 'alpha') ? document.getElementById('val-alpha') : document.getElementById('val-beta');
+                if (activeTeam === 'alpha') scoreAlpha += 10; else scoreBeta += 10;
+                updateScores();
+                scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop');
+                
+                // 1. 兩張牌發出金色閃光爆發
+                document.querySelectorAll('.card').forEach(c => {
+                    c.animate([
+                        { boxShadow: '0 0 0px white inset, 0 0 40px rgba(255,255,255,0.2)' },
+                        { boxShadow: '0 0 60px #fbbf24 inset, 0 0 100px #fbbf24', backgroundColor: '#fffbe8' },
+                        { boxShadow: '0 0 0px white inset, 0 0 40px rgba(255,255,255,0.2)' }
+                    ], { duration: 800 });
+                });
+
+                // 2. 正確符號巨大化與粒子爆發
+                let matches = document.querySelectorAll(`[data-sym="${symId}"]`);
+                matches.forEach(m => {
+                    m.style.zIndex = "50"; // 推到最上層
+                    let origTransform = m.style.transform;
+                    let origColor = m.style.color;
+                    
+                    // 粒子爆發
+                    let r = m.getBoundingClientRect();
+                    explodeParticles(r.left + r.width/2, r.top + r.height/2);
+
+                    // 符號縮放光暈動畫
+                    m.animate([
+                        { transform: origTransform, color: origColor, filter: 'drop-shadow(0 0 0px gold)' },
+                        { transform: origTransform + ' scale(2.5)', color: '#fbbf24', filter: 'drop-shadow(0 0 30px #fbbf24)' },
+                        { transform: origTransform + ' scale(2.2)', color: '#fbbf24', filter: 'drop-shadow(0 0 30px #fbbf24)' },
+                        { transform: origTransform, color: origColor, filter: 'drop-shadow(0 0 0px gold)' }
+                    ], { duration: 2000, easing: 'ease-out' });
+                });
+
+                // 3. 畫面正中央大型「答對提示」
+                let popup = document.getElementById('correct-popup');
+                let teamName = activeTeam === 'alpha' ? '幾何天團' : '代數艦隊';
+                let teamColor = activeTeam === 'alpha' ? '#f87171' : '#60a5fa';
+                popup.innerHTML = `<div style="font-size:3.5rem; color:${teamColor}; margin-bottom:10px;">${teamName}</div>🎉 答對！ ＋10`;
+                popup.style.display = 'block';
+                popup.animate([
+                    { transform: 'translate(-50%, -50%) scale(0.5)', opacity: 0 },
+                    { transform: 'translate(-50%, -50%) scale(1.1)', opacity: 1, offset: 0.15 },
+                    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1, offset: 0.85 },
+                    { transform: 'translate(-50%, -50%) scale(1.5)', opacity: 0 }
+                ], { duration: 2000 });
+
+                // 4. 延遲 2 秒後換題
+                roundDelayTimer = setTimeout(() => {
+                    popup.style.display = 'none';
+                    isAnimating = false;
+                    nextRound(); 
+                }, 2000);
+
+            } else { 
+                handleWrongAnswer(); 
+            }
+        }
+
+        function handleWrongAnswer() {
+            playSound('wrong');
+            if (activeTeam === 'alpha') { scoreAlpha -= 5; freezeAlpha = true; setTimeout(() => { freezeAlpha = false; updateBuzzerUI(); }, 3000); } 
+            else { scoreBeta -= 5; freezeBeta = true; setTimeout(() => { freezeBeta = false; updateBuzzerUI(); }, 3000); }
+            activeTeam = null; updateBuzzerUI(); updateScores();
+        }
+
+        function updateScores() { document.getElementById('val-alpha').innerText = scoreAlpha; document.getElementById('val-beta').innerText = scoreBeta; }
+        function updateBuzzerUI() {
+            let btnA = document.getElementById('btn-alpha'); let btnB = document.getElementById('btn-beta');
+            btnA.className = 'buzzer'; btnB.className = 'buzzer'; btnA.innerText = "幾何天團 搶答 (A)"; btnB.innerText = "代數艦隊 搶答 (L)";
+            btnA.disabled = false; btnB.disabled = false;
+            if (freezeAlpha) { btnA.classList.add('frozen'); btnA.innerText = "❄️ 凍結中 ❄️"; }
+            if (freezeBeta) { btnB.classList.add('frozen'); btnB.innerText = "❄️ 凍結中 ❄️"; }
+            if (activeTeam === 'alpha') { btnA.classList.add('active'); btnA.innerText = "👉 快點擊答案！"; btnB.disabled = true; } 
+            else if (activeTeam === 'beta') { btnB.classList.add('active'); btnB.innerText = "👉 快點擊答案！"; btnA.disabled = true; }
+        }
+
+        // --- 老師控制台功能 ---
+        function tCtrlPause() {
+            isPaused = !isPaused;
+            let btn = document.getElementById('btn-pause');
+            let timerEl = document.getElementById('timer');
+            if (isPaused) {
+                btn.innerHTML = '▶ 繼續計時'; btn.className = 'tc-btn red';
+                timerEl.classList.add('paused');
+            } else {
+                btn.innerHTML = '⏸ 暫停計時'; btn.className = 'tc-btn gold';
+                timerEl.classList.remove('paused');
+            }
+        }
+        function tCtrlScore(team, pts) {
+            initAudio();
+            if (team === 'alpha') scoreAlpha += pts; else scoreBeta += pts;
+            playSound(pts > 0 ? 'correct' : 'wrong');
+            updateScores();
+        }
+        function tCtrlHint() {
+            if (!currentMatch) return;
+            document.querySelectorAll(`[data-sym="${currentMatch}"]`).forEach(m => {
+                let origTransform = m.style.transform;
+                m.animate([
+                    { transform: origTransform, filter: 'drop-shadow(0 0 0px #22c55e)' },
+                    { transform: origTransform + ' scale(1.5)', filter: 'drop-shadow(0 0 20px #22c55e)' },
+                    { transform: origTransform, filter: 'drop-shadow(0 0 0px #22c55e)' }
+                ], { duration: 1000, iterations: 2 });
+            });
+        }
+        function tCtrlSkip() {
+            clearTimeout(roundDelayTimer); // 清除特效延遲
+            document.getElementById('correct-popup').style.display = 'none';
+            isAnimating = false;
+            nextRound();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'a') buzz('alpha'); if (e.key.toLowerCase() === 'l') buzz('beta');
+        });
+
+        // --- 結算與煙火特效 ---
+        function showGameOver() {
+            clearInterval(gameInterval);
+            document.getElementById('header').style.display = 'none'; document.getElementById('game-area').style.display = 'none'; document.getElementById('controls').style.display = 'none'; document.getElementById('teacher-console').style.display = 'none';
+            document.getElementById('result-overlay').style.display = 'flex';
+            document.getElementById('final-score-alpha').innerText = scoreAlpha; document.getElementById('final-score-beta').innerText = scoreBeta;
+            if (scoreAlpha > scoreBeta) { document.getElementById('winner-alpha').style.display = 'block'; document.getElementById('result-beta').style.opacity = '0.3'; launchFireworks(document.getElementById('result-alpha')); } 
+            else if (scoreBeta > scoreAlpha) { document.getElementById('winner-beta').style.display = 'block'; document.getElementById('result-alpha').style.opacity = '0.3'; launchFireworks(document.getElementById('result-beta')); } 
+            else { document.getElementById('winner-alpha').innerText = '🤝 勢均力敵'; document.getElementById('winner-beta').innerText = '🤝 勢均力敵'; document.getElementById('winner-alpha').style.display = 'block'; document.getElementById('winner-beta').style.display = 'block'; }
+        }
+
+        function launchFireworks(container) {
+            setInterval(() => {
+                const colors = ['#fbbf24', '#f87171', '#34d399', '#60a5fa', '#ffffff'];
+                const cx = Math.random() * 80 + 10; const cy = Math.random() * 50 + 10; 
+                for(let i=0; i<40; i++) {
+                    let particle = document.createElement('div'); particle.style.position = 'absolute';
+                    particle.style.width = '8px'; particle.style.height = '8px'; particle.style.borderRadius = '50%';
+                    particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    particle.style.left = cx + '%'; particle.style.top = cy + '%'; particle.style.boxShadow = `0 0 15px ${particle.style.backgroundColor}`;
+                    container.appendChild(particle);
+                    let angle = Math.random() * Math.PI * 2; let force = Math.random() * 250 + 50;
+                    let tx = Math.cos(angle) * force; let ty = Math.sin(angle) * force + 100; 
+                    let anim = particle.animate([ { transform: 'translate(0, 0) scale(1)', opacity: 1 }, { transform: `translate(${tx}px, ${ty}px) scale(0)`, opacity: 0 } ], { duration: 1200 + Math.random() * 800, easing: 'cubic-bezier(0, .9, .57, 1)' });
+                    anim.onfinish = () => particle.remove();
+                }
+            }, 700); 
+        }
+    </script>
+</body>
+</html>

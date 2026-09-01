@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>數學牛頭王</title>
+    <style>
+        /* 全局設定與微風草地背景 */
+        * { box-sizing: border-box; }
+        @keyframes breeze {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(120deg, #66bb6a, #43a047, #388e3c, #66bb6a);
+            background-size: 300% 300%;
+            animation: breeze 12s ease-in-out infinite;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: #ffffff;
+            user-select: none;
+            display: flex;
+        }
+
+        /* 版面配置：左側桌面 (70%)、右側控制區 (30%) */
+        #left-panel {
+            flex: 0 0 70%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        #right-panel {
+            flex: 0 0 30%;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+
+        /* 標題與按鈕 */
+        h1 { font-size: 2.5rem; text-align: center; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); margin-top: 0; }
+        .btn {
+            background-color: #ffb300;
+            color: #000;
+            border: 3px solid #ff8f00;
+            padding: 12px 25px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.1s, background-color 0.2s;
+            margin: 10px;
+            width: 90%;
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn:hover { background-color: #ffca28; }
+
+        /* 桌面列與玩家計分板整合 */
+        .row-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 10px 15px;
+            margin: 10px 0;
+        }
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .player-score-inline {
+            background: rgba(0,0,0,0.5);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+            width: 140px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* 放大後的卡牌與空位設計 */
+        .slot {
+            width: 85px;
+            height: 125px;
+            border: 3px dashed rgba(255, 255, 255, 0.4);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .bomb-slot {
+            border-color: rgba(229, 57, 53, 0.6);
+            background: rgba(229, 57, 53, 0.1);
+        }
+        .bomb-icon {
+            font-size: 3.5rem;
+            opacity: 0.6;
+            position: absolute;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            color: #333;
+            border-radius: 8px;
+            position: absolute;
+            top: 0; left: 0;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+        .card:hover { transform: translateY(-5px); }
+        
+        /* 爆炸動畫 */
+        @keyframes explode-shake {
+            0% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); box-shadow: 0 0 15px red; }
+            50% { transform: scale(1.1) rotate(5deg); box-shadow: 0 0 15px red; }
+            75% { transform: scale(1.1) rotate(-5deg); box-shadow: 0 0 15px red; }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+        .exploding {
+            animation: explode-shake 0.5s infinite;
+            border: 3px solid red;
+        }
+
+        .penalty {
+            color: #e53935;
+            font-size: 1.1rem;
+            width: 100%;
+            height: 40%; 
+            padding: 5px 2px 0 2px;
+            text-align: center;
+            letter-spacing: -2.5px;
+            line-height: 1.1;
+            display: flex;
+            justify-content: center;
+            align-content: flex-start;
+            flex-wrap: wrap;
+        }
+        .card-number {
+            font-size: 2.8rem;
+            font-weight: bold;
+            height: 60%; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: -5px; 
+        }
+
+        /* 玩家操作區與手牌 */
+        #turn-indicator { margin: 20px 0; color: #ffca28; }
+        #hand { 
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        #hand .card { position: relative; width: 85px; height: 125px; } 
+
+        /* 結算專用的右側顯示區 (不擋桌面的關鍵) */
+        #resolve-area {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 15px;
+            margin-top: 10px;
+        }
+        #resolve-msg {
+            font-size: 1.4rem;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        #resolve-card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        /* 讓結算區的卡牌可以靜態排版 */
+        .card-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-wrapper .card {
+            position: relative; 
+            width: 75px; 
+            height: 110px;
+        }
+        .player-label {
+            font-weight: bold;
+            font-size: 1.2rem;
+            background: #ff8f00;
+            padding: 2px 10px;
+            border-radius: 10px;
+            color: #000;
+        }
+
+        /* 全螢幕過場視窗 (僅用於開始/結束/交接平板) */
+        #modal-overlay {
+            display: flex;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #modal-box {
+            background: #fff9c4; 
+            color: #333;
+            padding: 40px 50px;
+            border-radius: 25px;
+            border: 6px solid #fbc02d;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            text-align: center;
+            width: 85vw;
+            max-width: 900px;
+            font-size: 1.8rem;
+            line-height: 1.6;
+        }
+        #intro-content { text-align: left; font-size: 1.7rem; }
+        #intro-content h2 { font-size: 3rem; margin-top: 0; margin-bottom: 25px; text-align: center; }
+
+        #game-container { display: none; width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- 左側：桌面區與各列專屬計分 -->
+        <div id="left-panel">
+            <div id="table">
+                <div class="row-container"><div class="row" id="row-0"></div><div class="player-score-inline" id="score-0"></div></div>
+                <div class="row-container"><div class="row" id="row-1"></div><div class="player-score-inline" id="score-1"></div></div>
+                <div class="row-container"><div class="row" id="row-2"></div><div class="player-score-inline" id="score-2"></div></div>
+                <div class="row-container"><div class="row" id="row-3"></div><div class="player-score-inline" id="score-3"></div></div>
+            </div>
+        </div>
+
+        <!-- 右側：玩家操作與專屬教學結算區 -->
+        <div id="right-panel">
+            <h1>數學牛頭王</h1>
+            
+            <!-- 出牌階段使用的區塊 -->
+            <div id="turn-area" style="width: 100%; text-align: center;">
+                <h2 id="turn-indicator">等待中...</h2>
+                <button class="btn" id="show-hand-btn" onclick="showHand()">顯示我的手牌</button>
+                <div id="hand-container" style="display:none; width:100%;">
+                    <div id="hand"></div>
+                </div>
+                <button class="btn" id="start-resolve-btn" style="display: none; background-color: #4caf50; color: white; border-color:#388e3c;" onclick="startResolutionPhase()">進入結算階段</button>
+            </div>
+
+            <!-- 結算階段使用的動態教學區 (不擋視線) -->
+            <div id="resolve-area">
+                <div id="resolve-msg"></div>
+                <div id="resolve-card-container"></div>
+                <button class="btn" id="resolve-action-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全螢幕遮罩 (僅用於換人與遊戲結束) -->
+    <div id="modal-overlay">
+        <div id="modal-box">
+            <div id="modal-content">
+                <div id="intro-content">
+                    <h2>🎲 數學牛頭王</h2>
+                    <p>
+                        1. 四位玩家：<b>玩家 1、玩家 2、玩家 3、玩家 4</b>。<br>
+                        2. 桌面 4 列，每列前 5 個是安全格，<b>第 6 個是💣炸彈格</b>。<br>
+                        3. <b>玩法：</b>每人暗出一張牌，翻開後由小到大結算。必須放在「比自己小，且差距最小」的列。<br>
+                        4. <b>爆桌：</b>放入第 6 個位置引發炸彈！收走前 5 張牌扣分。<br>
+                        5. <b>太小：</b>比桌上所有牌都小，自動收走扣分最少的一列。<br>
+                    </p>
+                </div>
+            </div>
+            <br>
+            <button class="btn" id="modal-btn" onclick="startGame()">開始遊戲</button>
+        </div>
+    </div>
+
+    <script>
+        const symbols = ['1', '2', '3', '4'];
+        let deck = [], players = [], tableRows = [[], [], [], []];
+        let currentPlayerIndex = 0;
+        let selectedCards = []; 
+
+        // 全螢幕交接平板用的彈窗
+        function showModalAsync(htmlContent, buttonText) {
+            return new Promise(resolve => {
+                document.getElementById('modal-overlay').style.display = 'flex';
+                document.getElementById('modal-content').innerHTML = htmlContent;
+                const btn = document.getElementById('modal-btn');
+                btn.innerText = buttonText;
+                btn.onclick = () => {
+                    document.getElementById('modal-overlay').style.display = 'none';
+                    resolve();
+                };
+            });
+        }
+
+        // 專屬右側的非同步互動介面 (教學不擋畫面)
+        function promptRightPanel(htmlMsg, cardElements, btnText) {
+            return new Promise(resolve => {
+                const area = document.getElementById('resolve-area');
+                const msgDiv = document.getElementById('resolve-msg');
+                const cardContainer = document.getElementById('resolve-card-container');
+                const btn = document.getElementById('resolve-action-btn');
+                
+                document.getElementById('turn-area').style.display = 'none';
+                area.style.display = 'flex';
+                
+                msgDiv.innerHTML = htmlMsg;
+                cardContainer.innerHTML = '';
+                if (cardElements) {
+                    cardElements.forEach(el => cardContainer.appendChild(el));
+                }
+                
+                btn.innerText = btnText;
+                btn.onclick = () => { resolve(); };
+            });
+        }
+
+        function getPenalty(num) {
+            if (num === 55) return 7;
+            if (num % 11 === 0) return 5;
+            if (num % 10 === 0) return 3;
+            if (num % 10 === 5) return 2;
+            return 1;
+        }
+
+        function createCardHTML(card, onClick = null) {
+            const div = document.createElement('div');
+            div.className = 'card';
+            if (card.isExploding) div.classList.add('exploding');
+            
+            let bulls = '🐂'.repeat(card.penalty);
+            div.innerHTML = `<div class="penalty">${bulls}</div><div class="card-number">${card.value}</div>`;
+            if (onClick) div.onclick = onClick;
+            return div;
+        }
+
+        // 產生帶有玩家標籤的卡牌 DOM (供右側預覽用)
+        function createWrappedCard(card, playerSymbol) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'card-wrapper';
+            wrapper.innerHTML = `<div class="player-label">玩家 ${playerSymbol}</div>`;
+            wrapper.appendChild(createCardHTML(card));
+            return wrapper;
+        }
+
+        function startGame() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+
+            deck = [];
+            for (let i = 1; i <= 104; i++) { deck.push({ value: i, penalty: getPenalty(i) }); }
+            deck.sort(() => Math.random() - 0.5);
+
+            players = [];
+            for (let i = 0; i < 4; i++) {
+                players.push({ symbol: symbols[i], hand: deck.splice(0, 10).sort((a, b) => a.value - b.value), score: 0 });
+            }
+
+            for (let i = 0; i < 4; i++) { tableRows[i] = [deck.pop()]; }
+
+            renderTable();
+            startTurn();
+        }
+
+        function renderTable() {
+            for (let i = 0; i < 4; i++) {
+                const rowDiv = document.getElementById(`row-${i}`);
+                rowDiv.innerHTML = '';
+                for (let j = 0; j < 6; j++) {
+                    const slotDiv = document.createElement('div');
+                    if (j === 5) {
+                        slotDiv.className = 'slot bomb-slot';
+                        if (!tableRows[i][j]) slotDiv.innerHTML = '<div class="bomb-icon">💣</div>';
+                    } else {
+                        slotDiv.className = 'slot';
+                    }
+                    if (tableRows[i][j]) slotDiv.appendChild(createCardHTML(tableRows[i][j]));
+                    rowDiv.appendChild(slotDiv);
+                }
+                document.getElementById(`score-${i}`).innerHTML = `玩家 ${players[i].symbol}<br><span style="color:#ff8a65;">-${players[i].score} 分</span>`;
+            }
+        }
+
+        function startTurn() {
+            document.getElementById('turn-area').style.display = 'block';
+            document.getElementById('resolve-area').style.display = 'none';
+            document.getElementById('hand-container').style.display = 'none';
+            document.getElementById('start-resolve-btn').style.display = 'none';
+            document.getElementById('show-hand-btn').style.display = 'block';
+            document.getElementById('turn-indicator').innerHTML = `請將平板交給<br><br><span style="font-size:3.5rem; color:#fff;">玩家 ${players[currentPlayerIndex].symbol}</span>`;
+        }
+
+        function showHand() {
+            document.getElementById('show-hand-btn').style.display = 'none';
+            document.getElementById('hand-container').style.display = 'block';
+            const handDiv = document.getElementById('hand');
+            handDiv.innerHTML = '';
+            
+            players[currentPlayerIndex].hand.forEach((card, index) => {
+                handDiv.appendChild(createCardHTML(card, () => selectCard(index)));
+            });
+            document.getElementById('turn-indicator').innerHTML = `<b style="font-size:2.2rem">玩家 ${players[currentPlayerIndex].symbol}</b><br>請點選一張牌`;
+        }
+
+        function selectCard(cardIndex) {
+            const player = players[currentPlayerIndex];
+            const card = player.hand.splice(cardIndex, 1)[0];
+            selectedCards.push({ playerIndex: currentPlayerIndex, card: card });
+            
+            document.getElementById('hand-container').style.display = 'none';
+            currentPlayerIndex++;
+            
+            if (currentPlayerIndex < 4) {
+                showModalAsync(
+                    `<h2 style="color:#d32f2f; font-size: 2.8rem;">已鎖定手牌！</h2>
+                     <p style="font-size: 1.8rem;">請將平板傳給下一位：<br><br><b style="font-size: 3rem;">玩家 ${players[currentPlayerIndex].symbol}</b></p>`, 
+                    "我拿到了"
+                ).then(() => { startTurn(); });
+            } else {
+                document.getElementById('turn-indicator').innerHTML = `所有人皆已出牌！<br><span style="font-size:1.5rem">準備看誰引爆炸彈</span>`;
+                document.getElementById('start-resolve-btn').style.display = 'inline-block';
+            }
+        }
+
+        // 開啟全新分步教學結算
+        async function startResolutionPhase() {
+            selectedCards.sort((a, b) => a.card.value - b.card.value);
+
+            // 階段一：公開所有人的牌，讓大家看著左側牌桌討論
+            let allCardsDOM = selectedCards.map(s => createWrappedCard(s.card, players[s.playerIndex].symbol));
+            await promptRightPanel(
+                `<h2 style="color:#ffca28; margin:0 0 10px 0;">👀 雙方出牌公開</h2>
+                 <p style="text-align:left;">這是本回合大家出的牌 (已由小到大排序)。<br><br><b>討論時間：</b>請看著左側牌桌，猜猜看會發生什麼事？</p>`,
+                allCardsDOM,
+                "討論完畢，開始依序判定"
+            );
+
+            // 階段二：依序處理每張牌
+            for (let selection of selectedCards) {
+                const card = selection.card;
+                const pIndex = selection.playerIndex;
+                const pSymbol = players[pIndex].symbol;
+                
+                let bestRowIndex = -1;
+                let minDiff = Infinity;
+
+                for (let i = 0; i < 4; i++) {
+                    const lastCardValue = tableRows[i][tableRows[i].length - 1].value;
+                    if (lastCardValue < card.value) {
+                        if (card.value - lastCardValue < minDiff) {
+                            minDiff = card.value - lastCardValue;
+                            bestRowIndex = i;
+                        }
+                    }
+                }
+
+                // 詢問這張牌會去哪裡
+                let singleCardDOM = [createWrappedCard(card, pSymbol)];
+                await promptRightPanel(
+                    `<h2 style="color:#2196f3; margin:0 0 10px 0;">🤔 輪到 玩家 ${pSymbol}</h2>
+                     <p>數字 <b>${card.value}</b> 準備進場，請大家預測它會發生什麼事？</p>`,
+                    singleCardDOM,
+                    "查看判定結果"
+                );
+
+                // 公布結果並等待放置
+                if (bestRowIndex !== -1) {
+                    if (tableRows[bestRowIndex].length === 5) {
+                        let penaltySum = tableRows[bestRowIndex].slice(0, 5).reduce((sum, c) => sum + c.penalty, 0);
+                        
+                        await promptRightPanel(
+                            `<h2 style="color:#e53935; margin:0 0 10px 0;">💥 爆桌警告！</h2>
+                             <p style="text-align:left;">這張牌將被迫放進第 <b>${bestRowIndex + 1}</b> 列的第 6 格，觸發炸彈！</p>`,
+                            singleCardDOM,
+                            "放置卡牌並引爆炸彈"
+                        );
+                        
+                        // 動畫：放入第6格
+                        card.isExploding = true;
+                        tableRows[bestRowIndex].push(card); 
+                        renderTable();
+                        
+                        await promptRightPanel(
+                            `<h2 style="color:#e53935; margin:0 0 10px 0;">💥 結算扣分</h2>
+                             <p>玩家 ${pSymbol} 必須收走前 5 張牌，總共扣 <b style="color:#ff8a65; font-size:2rem;">${penaltySum}</b> 分！</p>`,
+                            null,
+                            "確認扣分，並清理桌面"
+                        );
+                        
+                        // 實際扣分並清理該列
+                        players[pIndex].score += penaltySum;
+                        card.isExploding = false;
+                        tableRows[bestRowIndex] = [card]; 
+                        renderTable();
+                        
+                    } else {
+                        await promptRightPanel(
+                            `<h2 style="color:#4caf50; margin:0 0 10px 0;">✅ 安全</h2>
+                             <p>比 <b>第 ${bestRowIndex + 1} 列</b> 稍大，可以安全放入！</p>`,
+                            singleCardDOM,
+                            "放置卡牌"
+                        );
+                        tableRows[bestRowIndex].push(card);
+                        renderTable();
+                    }
+                } else {
+                    let minPenaltyRow = 0;
+                    let minPenaltySum = Infinity;
+                    for (let i = 0; i < 4; i++) {
+                        let pSum = tableRows[i].reduce((sum, c) => sum + c.penalty, 0);
+                        if (pSum < minPenaltySum) { minPenaltySum = pSum; minPenaltyRow = i; }
+                    }
+                    
+                    await promptRightPanel(
+                        `<h2 style="color:#ff8f00; margin:0 0 10px 0;">⚠️ 牌太小了</h2>
+                         <p style="text-align:left;">比桌上所有的牌都小！系統判定收走扣分最少的 <b>第 ${minPenaltyRow + 1} 列</b>。</p>`,
+                        singleCardDOM,
+                        "放置卡牌並收走該列"
+                    );
+
+                    players[pIndex].score += minPenaltySum;
+                    tableRows[minPenaltyRow] = [card];
+                    renderTable();
+                    
+                    await promptRightPanel(
+                        `<h2 style="color:#ff8f00; margin:0 0 10px 0;">⚠️ 結算扣分</h2>
+                         <p>玩家 ${pSymbol} 總共扣了 <b style="color:#ff8a65; font-size:2rem;">${minPenaltySum}</b> 分！</p>`,
+                        null,
+                        "確認"
+                    );
+                }
+            }
+
+            // 回合結束判定
+            selectedCards = [];
+            currentPlayerIndex = 0;
+
+            if (players[0].hand.length > 0) {
+                await promptRightPanel(`<h2 style="color:#4caf50; font-size:2.5rem;">✅ 本回合結束</h2><p>請準備進入下一回合。</p>`, null, "進入下一回合");
+                startTurn();
+            } else {
+                players.sort((a, b) => a.score - b.score);
+                await showModalAsync(
+                    `<h1 style="font-size:4rem; margin-bottom:10px;">🏆 遊戲結束</h1>
+                     <p style="font-size:2.5rem">
+                        恭喜 <b style="font-size:3.5rem; color:#d32f2f;">玩家 ${players[0].symbol}</b> 獲勝！<br><br>
+                        整場遊戲只被扣了 ${players[0].score} 分！
+                     </p>`, 
+                    "重新開始"
+                );
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
