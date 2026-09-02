@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>趣味遊戲與知識互動樂園</title>
+    <!-- 引入手繪感可愛字體 (Caveat & Zen Maru Gothic) -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fdf8f2;
+            --card-bg: #fffbf0;
+            --text-color: #5c4033;
+            --accent-orange: #f4a261;
+            --accent-yellow: #e9c46a;
+            --accent-green: #a8d5ba;
+            --border-color: #6b4d38;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Zen Maru Gothic', cursive, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            /* 手繪點點背景紋理 */
+            background-image: radial-gradient(#e0d5c1 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+
+        /* 標題區域 */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            display: inline-block;
+            padding: 10px 25px;
+            background: #ffe8d6;
+            border: 3px solid var(--border-color);
+            /* 不規則手繪外框效果 */
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 4px 4px 0px var(--border-color);
+            transform: rotate(-1deg);
+        }
+
+        header p {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            color: #8d6e63;
+        }
+
+        /* 卡片容器 */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        /* 遊戲卡片樣式 */
+        .card {
+            background-color: var(--card-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 20px 225px 20px 255px/255px 20px 225px 20px;
+            width: 280px;
+            padding: 25px 20px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--text-color);
+            box-shadow: 5px 6px 0px var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) rotate(1deg);
+            box-shadow: 8px 12px 0px var(--border-color);
+        }
+
+        /* 可愛手繪插圖塗鴉圓框 */
+        .icon-box {
+            width: 80px;
+            height: 80px;
+            border-radius: 50% 45% 55% 40%;
+            border: 2px dashed var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background-color: #fff;
+        }
+
+        .card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #795548;
+            flex-grow: 1;
+        }
+
+        /* 手繪按鈕 */
+        .btn {
+            margin-top: 20px;
+            padding: 8px 20px;
+            background: var(--accent-orange);
+            color: #fff;
+            font-weight: bold;
+            border: 2px solid var(--border-color);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            box-shadow: 2px 3px 0px var(--border-color);
+            display: inline-block;
+        }
+
+        /* 新增遊戲按鈕卡片特別樣式 */
+        .add-card {
+            border-style: dashed;
+            background-color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            justify-content: center;
+        }
+
+        .add-card .add-icon {
+            font-size: 3.5rem;
+            color: var(--border-color);
+            margin-bottom: 10px;
+            transition: transform 0.3s;
+        }
+
+        .add-card:hover .add-icon {
+            transform: scale(1.2) rotate(90deg);
+        }
+
+        .add-card h2 {
+            color: #8d6e63;
+        }
+
+        /* 彈出視窗 Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(92, 64, 51, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+            padding: 30px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 8px 8px 0px var(--border-color);
+            position: relative;
+        }
+
+        .modal h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-family: inherit;
+            background: #fff;
+            outline: none;
+        }
+
+        .modal-btns {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .modal-btns button {
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn-cancel {
+            background: #e0d5c1;
+            color: var(--text-color);
+        }
+
+        /* 頁尾 */
+        footer {
+            margin-top: 50px;
+            font-family: 'Caveat', cursive;
+            font-size: 1.2rem;
+            color: #a1887f;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🎨 互動遊戲學習角落</h1>
+        <p>點擊下方小卡，開始今天的趣味挑戰吧！</p>
+    </header>
+
+    <main class="card-container" id="cardContainer">
+        <!-- 連結 1 -->
+        <a href="https://k0937017398-code.github.io/game/%E9%9B%BB%E5%BD%B1%E5%95%8F%E9%A1%8C%E9%81%8A%E6%88%B2%E7%B6%B2%E9%A0%81%E9%80%A3%E7%B5%90.html" class="card" target="_blank">
+            <div class="icon-box" style="background-color: #ffe5d9;">🪶</div>
+            <h2>迷雁返家路</h2>
+            <p>電影大螢幕知識競賽！跟著輕航機與大雁，開啟一場關於自然與保護的知識冒險。</p>
+            <div class="btn">開始挑戰</div>
+        </a>
+
+        <!-- 連結 2 -->
+        <a href="https://k0937017398-code.github.io/game/%E6%95%B8%E5%AD%97%E6%8E%92%E5%88%97%E7%89%9B%E9%A0%AD%E7%8E%8B.html" class="card" target="_blank">
+            <div class="icon-box" style="background-color: #fefae0;">🐮</div>
+            <h2>數學牛頭王</h2>
+            <p>數字排列策略對決！考驗你的邏輯與運算，小心避開炸彈格，奪得最高分！</p>
+            <div class="btn">進入遊戲</div>
+        </a>
+
+        <!-- 連結 3 -->
+        <a href="https://k0937017398-code.github.io/game/%E6%95%B8%E5%AD%97%E6%8E%92%E5%88%97%E7%89%9B%E9%A0%AD%E7%8E%8B.html" class="card" target="_blank">
+            <div class="icon-box" style="background-color: #e8f5e9;">⚡</div>
+            <h2>數學嗒寶：符號大戰</h2>
+            <p>幾何天團 VS 代數艦隊！極速搶答，考驗眼睛與大腦反應的雙人符號對決。</p>
+            <div class="btn">進行對戰</div>
+        </a>
+
+        <!-- 新增頁面按鈕卡片 -->
+        <div class="card add-card" onclick="openModal()">
+            <div class="add-icon">➕</div>
+            <h2>新增遊戲網頁</h2>
+            <p>點擊這裡新增全新的遊戲或學習連結！</p>
+        </div>
+    </main>
+
+    <!-- 新增連結彈出視窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h3>✏️ 新增遊戲網頁</h3>
+            <div class="form-group">
+                <label>遊戲名稱：</label>
+                <input type="text" id="gameTitle" placeholder="例如：數學大冒險">
+            </div>
+            <div class="form-group">
+                <label>網頁連結 (URL)：</label>
+                <input type="text" id="gameUrl" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>簡短介紹：</label>
+                <textarea id="gameDesc" rows="2" placeholder="簡單介紹一下這個遊戲吧！"></textarea>
+            </div>
+            <div class="form-group">
+                <label>選擇圖案 (Emoji)：</label>
+                <input type="text" id="gameIcon" value="🎮" style="width: 80px; text-align: center;">
+            </div>
+            <div class="modal-btns">
+                <button class="btn btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn" onclick="addGameCard()">完成新增</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Handcrafted with Warmth ♡
+    </footer>
+
+    <script>
+        const colors = ['#ffe5d9', '#fefae0', '#e8f5e9', '#e0f2fe', '#f3e8ff'];
+
+        function openModal() {
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            // 清空輸入欄
+            document.getElementById('gameTitle').value = '';
+            document.getElementById('gameUrl').value = '';
+            document.getElementById('gameDesc').value = '';
+            document.getElementById('gameIcon').value = '🎮';
+        }
+
+        function addGameCard() {
+            const title = document.getElementById('gameTitle').value.trim();
+            const url = document.getElementById('gameUrl').value.trim();
+            const desc = document.getElementById('gameDesc').value.trim();
+            const icon = document.getElementById('gameIcon').value.trim() || '🎮';
+
+            if (!title || !url) {
+                alert('請至少填寫遊戲名稱與網頁連結喔！');
+                return;
+            }
+
+            // 隨機選擇底色
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // 建立卡片 HTML 結構
+            const newCard = document.createElement('a');
+            newCard.href = url;
+            newCard.className = 'card';
+            newCard.target = '_blank';
+            newCard.innerHTML = `
+                <div class="icon-box" style="background-color: ${randomColor};">${icon}</div>
+                <h2>${title}</h2>
+                <p>${desc}</p>
+                <div class="btn">開始遊戲</div>
+            `;
+
+            // 將新卡片插入到「新增卡片」之前
+            const container = document.getElementById('cardContainer');
+            const addCard = container.querySelector('.add-card');
+            container.insertBefore(newCard, addCard);
+
+            closeModal();
+        }
+    </script>
+</body>
+</html>
