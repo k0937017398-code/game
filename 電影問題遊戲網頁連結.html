@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>《迷雁返家路》大型互動挑戰賽</title>
+    <!-- 引入高質感五彩紙屑特效庫 (Canvas-confetti) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4A6B53; /* 加深森林綠，提高大螢幕對比度 */
+            --secondary-color: #EADBC8; 
+            --accent-color: #C38247; /* 加深橡木橘 */
+            --bg-color: #F4F1EA; 
+            --text-color: #2B2322; /* 接近純黑的原木色 */
+            --success-color: #2D6A4F; 
+            --error-color: #A63A3B; 
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "PingFang TC", "Helvetica Neue", "Microsoft JhengHei", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            background: #FFFFFF;
+            width: 100%;
+            max-width: 1400px; /* 拓寬橫幅，適合16:9大投影幕 */
+            min-height: 800px;
+            border-radius: 32px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            border: 5px solid var(--primary-color);
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 4px dashed var(--secondary-color);
+            padding-bottom: 20px;
+        }
+
+        .title {
+            font-size: 42px; /* 放大標題 */
+            color: var(--primary-color);
+            font-weight: 900;
+        }
+
+        .progress {
+            font-size: 28px; /* 放大題號提示 */
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-weight: bold;
+        }
+
+        .question-box {
+            margin-bottom: 30px;
+            flex-grow: 1;
+        }
+
+        .question-text {
+            font-size: 40px; /* 題目字體大幅放大 */
+            line-height: 1.5;
+            margin-bottom: 40px;
+            font-weight: 900; /* 極粗體 */
+            letter-spacing: 1px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2x2 雙列排版，適合大螢幕 */
+            gap: 24px;
+        }
+
+        .option-btn {
+            background: #FFFFFF;
+            border: 4px solid #DCD6CD;
+            border-radius: 20px;
+            padding: 30px 35px;
+            font-size: 30px; /* 選項文字超放大 */
+            font-weight: 800; /* 粗體 */
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            line-height: 1.4;
+        }
+
+        /* ABCD 標籤特化樣式 */
+        .option-prefix {
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            min-width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 20px;
+            font-size: 32px;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            border-color: var(--accent-color);
+            background-color: #FAF6F0;
+            transform: scale(1.02); /* 懸停稍微放大微動效 */
+        }
+
+        /* 答題狀態 - 放大對比度 */
+        .option-btn.correct {
+            background-color: #D8F3DC;
+            border-color: var(--success-color);
+            color: var(--success-color);
+        }
+        .option-btn.correct .option-prefix {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .option-btn.wrong {
+            background-color: #FEEAEC;
+            border-color: var(--error-color);
+            color: var(--error-color);
+            opacity: 0.6;
+        }
+        .option-btn.wrong .option-prefix {
+            background-color: var(--error-color);
+            color: white;
+        }
+
+        /* 大型答對慶祝覆蓋層 */
+        .celebration-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            border-radius: 28px;
+            display: none;
+            animation: zoomIn 0.3s ease-out;
+        }
+
+        .celebration-text {
+            font-size: 80px;
+            font-weight: 900;
+            color: var(--success-color);
+            text-shadow: 2px 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* 說明解析盒 */
+        .feedback-box {
+            margin-top: 25px;
+            padding: 30px;
+            border-radius: 20px;
+            display: none;
+            font-size: 28px; /* 放大解析字體 */
+            font-weight: 700;
+            line-height: 1.6;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .feedback-box.correct-style {
+            background-color: #E8F5E9;
+            border-left: 10px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .feedback-box.wrong-style {
+            background-color: #FFEBEE;
+            border-left: 10px solid var(--error-color);
+            color: #A63A3B;
+        }
+
+        .footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .next-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            font-size: 28px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 900;
+            display: none;
+            transition: background 0.2s;
+        }
+
+        .next-btn:hover {
+            background-color: #A96B33;
+        }
+
+        /* 終點畫面 */
+        .result-screen {
+            text-align: center;
+            padding: 60px 20px;
+            display: none;
+        }
+
+        .result-title {
+            font-size: 55px;
+            font-weight: 900;
+            color: var(--primary-color);
+            margin-bottom: 30px;
+        }
+
+        .score-display {
+            font-size: 110px;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+        }
+
+        .result-text {
+            font-size: 32px;
+            font-weight: 700;
+            line-height: 1.8;
+            margin-bottom: 50px;
+            padding: 0 40px;
+        }
+
+        .restart-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 25px 60px;
+            font-size: 32px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 900;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 瞬間全螢幕答對慶祝視覺層 -->
+        <div id="celebration-overlay" class="celebration-overlay" onclick="closeCelebration()">
+            <div class="celebration-text">🎯 全場答對！！！</div>
+            <div style="font-size: 30px; font-weight: bold; color: #555;">( 點擊任意處看詳細解析 )</div>
+        </div>
+
+        <!-- 主測驗畫面 -->
+        <div id="quiz-screen">
+            <div class="header">
+                <div class="title">🍃 《迷雁返家路》電影大螢幕知識競賽</div>
+                <div class="progress" id="progress-text">第 1 / 3 題</div>
+            </div>
+
+            <div class="question-box">
+                <div class="question-text" id="question-el">題目載入中...</div>
+                <div class="options-grid" id="options-container">
+                    <!-- JS 動態帶入 ABCD 選項 -->
+                </div>
+            </div>
+
+            <div class="feedback-box" id="feedback-el"></div>
+
+            <div class="footer">
+                <button class="next-btn" id="next-btn" onclick="nextQuestion()">下一題 👉</button>
+            </div>
+        </div>
+
+        <!-- 結算畫面 -->
+        <div id="result-screen" class="result-screen">
+            <div class="result-title">🎉 挑戰全數結束！</div>
+            <div class="score-display" id="score-el">0 分</div>
+            <div class="result-text" id="result-text-el"></div>
+            <button class="restart-btn" onclick="restartQuiz()">重新開始 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                question: "在電影中，父親柯斯提安計畫開著輕航機帶領失去父母的白額雁遷徙，其最主要的目的是什麼？",
+                options: [
+                    "為了在國際鳥類博覽會上贏得高額獎金",
+                    "引導雁鳥避開獵人與都市光害，建立安全的遷徙路線",
+                    "訓練雁鳥成為農舍的守衛鳥以防範外敵",
+                    "測試巴黎博物館資助研發的新型環保輕航機"
+                ],
+                correct: 1,
+                explanation: "✨ 正確答案是 B！電影中因為人類對大自然的破壞、高壓電塔、獵人以及都市光害，導致候鳥的傳統遷徙路線充滿危險。柯斯提安的計畫就是為了幫這群幼雁開闢一條遠離人類威脅的「安全淨土路線」。"
+            },
+            {
+                question: "雁鳥雛鳥在出生後，會將第一眼看到的活動生物認作母親並緊緊跟隨。這種神奇的野生動物行為，在動物行為學中稱為：",
+                options: [
+                    "制約反射 (Conditioning)",
+                    "模仿學習 (Observational Learning)",
+                    "印痕作用 (Imprinting)",
+                    "趨光本能 (Phototaxis)"
+                ],
+                correct: 2,
+                explanation: "✨ 正確答案是 C！這是行為學大師勞倫茲著名的「印痕理論」。片中幼雁一出生看見的就是少年托馬，因此認定他為母親。這也開啟了托馬從原本沉迷網路遊戲，轉變為肩負保護生命責任的蛻變之旅！"
+            },
+            {
+                question: "關於這部感人至深的電影《迷雁返家路》（給我翅膀），下列哪一項幕後背景的敘述是正確的？",
+                options: [
+                    "這是完全虛構的科幻故事，輕航機全由好萊塢特效後製",
+                    "這是根據法國鳥類學家基督徒·穆萊克 (Christian Moullec) 的真實事蹟改編",
+                    "電影中的雁鳥全部都是由人工智能 (AI) 3D 動畫繪製而成",
+                    "這是為了宣傳挪威與法國政府聯合推廣的輕航機觀光季"
+                ],
+                correct: 1,
+                explanation: "✨ 正確答案是 B！這是一段真實的奇蹟。電影改編自法國氣象與鳥類學家基督徒·穆萊克的真實人生。他本人不僅在上世紀90年代親自開輕航機引導過候鳥，更親自擔任本片的顧問與飛行指導，片中的畫面絕大多數都是令人震撼的「實景拍攝」！"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const prefixes = ['A', 'B', 'C', 'D'];
+
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const questionEl = document.getElementById('question-el');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackEl = document.getElementById('feedback-el');
+        const nextBtn = document.getElementById('next-btn');
+        const progressText = document.getElementById('progress-text');
+        const scoreEl = document.getElementById('score-el');
+        const resultTextEl = document.getElementById('result-text-el');
+        const celebrationOverlay = document.getElementById('celebration-overlay');
+
+        function initQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            quizScreen.style.display = 'block';
+            resultScreen.style.display = 'none';
+            celebrationOverlay.style.display = 'none';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            feedbackEl.style.display = 'none';
+            feedbackEl.className = 'feedback-box';
+            nextBtn.style.display = 'none';
+            optionsContainer.innerHTML = '';
+
+            const currentData = quizData[currentQuestionIndex];
+            progressText.innerText = `第 ${currentQuestionIndex + 1} / ${quizData.length} 題`;
+            questionEl.innerText = currentData.question;
+
+            currentData.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                
+                // 動態塞入大大的 ABCD 前綴
+                button.innerHTML = `<span class="option-prefix">${prefixes[index]}</span> ${option}`;
+                button.onclick = () => selectOption(index, button);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function triggerConfetti() {
+            // 發射側邊連續緞帶花與彩紙，讓400人全場有感
+            var duration = 2.5 * 1000;
+            var end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 5,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.8 }
+                });
+                confetti({
+                    particleCount: 5,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.8 }
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
+            }());
+        }
+
+        function selectOption(selectedIndex, selectedBtn) {
+            const currentData = quizData[currentQuestionIndex];
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+
+            allButtons.forEach(btn => btn.disabled = true);
+
+            if (selectedIndex === currentData.correct) {
+                selectedBtn.classList.add('correct');
+                score += 100 / quizData.length;
+                
+                // 1. 顯示大螢幕滿版答對歡慶層
+                celebrationOverlay.style.display = 'flex';
+                // 2. 噴發五彩碎紙特效
+                triggerConfetti();
+
+                feedbackEl.innerText = currentData.explanation;
+                feedbackEl.classList.add('correct-style');
+            } else {
+                selectedBtn.classList.add('wrong');
+                allButtons[currentData.correct].classList.add('correct');
+                
+                feedbackEl.innerText = `💡 現場解析：${currentData.explanation}`;
+                feedbackEl.classList.add('wrong-style');
+                feedbackEl.style.display = 'block';
+                nextBtn.style.display = 'block';
+            }
+        }
+
+        function closeCelebration() {
+            // 點擊歡慶層後收起，顯示詳細解析與下一題按鈕
+            celebrationOverlay.style.display = 'none';
+            feedbackEl.style.display = 'block';
+            nextBtn.style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizScreen.style.display = 'none';
+            resultScreen.style.display = 'block';
+            
+            const finalScore = Math.round(score);
+            scoreEl.innerText = `${finalScore} 分`;
+
+            // 大螢幕結算語
+            let reviewText = "";
+            if (finalScore === 100) {
+                reviewText = "🎯 完美通關！全場觀眾的生態與保育素養簡直是專家等級！掌聲鼓勵！";
+            } else if (finalScore >= 60) {
+                reviewText = "🌿 挑戰成功！大家都精準抓到了這部感人電影的核心科學與環境價值！";
+            } else {
+                reviewText = "🎈 謝謝全場的熱情參與！這部美麗的電影非常適合跟家人夥伴一同細細品味。";
+            }
+            resultTextEl.innerText = reviewText;
+        }
+
+        function restartQuiz() {
+            initQuiz();
+        }
+
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
