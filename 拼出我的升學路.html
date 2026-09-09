@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的升學藍圖拼圖戰</title>
+    <!-- 加入 DragDropTouch 套件，讓平板與手機支援原生的 HTML5 拖曳功能 -->
+    <script src="https://bernardo-castilho.github.io/DragDropTouch/DragDropTouch.js"></script>
+    <style>
+        :root {
+            --hs: #00b0f0; --chs: #4bacc6; --ths: #b7dde8; --uni: #00b050;
+            --techuni: #92d050; --v5: #ff9999; --c2: #ffc000; --t2: #ffda65;
+            --prep: #8a6d3b; --mil: #a94442; --sev: #ff4d4d; --mas: #002060;
+            --phd: #7f7f7f; --job: #cc99ff; --bg-color: #f4f6f9;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif; background-color: var(--bg-color);
+            margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center;
+            touch-action: pan-x pan-y; /* 優化平板滑動 */
+        }
+
+        .header-controls {
+            display: flex; justify-content: space-between; align-items: center;
+            width: 100%; max-width: 1200px; margin-bottom: 10px;
+        }
+
+        h1 { color: #333; margin: 0; font-size: 1.5rem; }
+
+        .btn-fullscreen {
+            background: #333; color: white; border: none; padding: 8px 15px;
+            border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+
+        .game-container {
+            display: flex; gap: 20px; max-width: 1200px; width: 100%;
+        }
+
+        /* 資源區 - 平板視覺優化 */
+        .resource-area {
+            flex: 1; background: white; border-radius: 15px; padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-wrap: wrap;
+            gap: 10px; align-content: flex-start; justify-content: center;
+            border: 3px dashed #ccc;
+        }
+
+        .resource-area h2 { width: 100%; font-size: 1.1rem; margin-top: 0; color: #555; text-align: center; }
+
+        /* 統一大小的方塊 */
+        .block {
+            width: 110px; height: 50px; /* 固定長寬 */
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; color: white; font-weight: bold; font-size: 0.9rem;
+            cursor: grab; user-select: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s; position: relative;
+        }
+
+        .block:active { cursor: grabbing; transform: scale(1.05); }
+        
+        .block[data-id="hs"] { background-color: var(--hs); }
+        .block[data-id="chs"] { background-color: var(--chs); }
+        .block[data-id="ths"] { background-color: var(--ths); color: #333; }
+        .block[data-id="uni"] { background-color: var(--uni); }
+        .block[data-id="techuni"] { background-color: var(--techuni); color: #333; }
+        .block[data-id="v5"] { background-color: var(--v5); }
+        .block[data-id="c2"] { background-color: var(--c2); }
+        .block[data-id="t2"] { background-color: var(--t2); color: #333; }
+        .block[data-id="prep"] { background-color: var(--prep); }
+        .block[data-id="mil"] { background-color: var(--mil); }
+        .block[data-id="sev"] { background-color: var(--sev); }
+        .block[data-id="mas"] { background-color: var(--mas); }
+        .block[data-id="phd"] { background-color: var(--phd); }
+        .block[data-id="job"] { background-color: var(--job); color: #333; }
+
+        .task-area {
+            flex: 2; background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative;
+        }
+
+        .y-axis {
+            position: absolute; left: 5px; top: 20px; bottom: 60px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            font-weight: bold; color: #666; font-size: 14px;
+        }
+
+        .board {
+            margin-left: 30px; margin-bottom: 30px; display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr 1fr 1fr 1fr 1.2fr;
+            grid-template-rows: 40px 50px 80px 80px 80px;
+            grid-template-areas:
+                "phd phd phd phd phd phd job"
+                "mas mas mas mas mas mas job"
+                "uni techuni t2  t2  mil sev job"
+                "uni techuni c2  v5  mil sev job"
+                "hs  chs     ths v5 prep sev job";
+            gap: 6px; min-height: 400px;
+        }
+
+        .dropzone {
+            background-color: #e9ecef; border: 2px dashed #adb5bd; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.3s;
+        }
+
+        .dropzone.drag-over { background-color: #d1e7dd; border-color: #198754; }
+        .dropzone.error { background-color: #f8d7da; border-color: #dc3545; animation: shake 0.4s; }
+
+        #dz-phd { grid-area: phd; } #dz-mas { grid-area: mas; } #dz-uni { grid-area: uni; }
+        #dz-techuni { grid-area: techuni; } #dz-t2 { grid-area: t2; } #dz-c2 { grid-area: c2; }
+        #dz-v5 { grid-area: v5; } #dz-hs { grid-area: hs; } #dz-chs { grid-area: chs; }
+        #dz-ths { grid-area: ths; } #dz-prep { grid-area: prep; } #dz-mil { grid-area: mil; }
+        #dz-sev { grid-area: sev; } #dz-job { grid-area: job; }
+
+        .x-axis {
+            text-align: center; font-weight: bold; font-size: 1.1rem; padding: 10px;
+            border: 2px solid #333; margin-left: 30px; background: #fff;
+        }
+        
+        .arrow-up {
+            display: flex; justify-content: space-around; margin-left: 30px;
+            margin-bottom: 5px; font-size: 18px;
+        }
+
+        /* 成功吸附後，方塊自動延展填滿網格 */
+        .dropzone .block {
+            width: 100%; height: 100%; box-sizing: border-box; border-radius: 6px;
+            box-shadow: none; cursor: default;
+        }
+
+        @keyframes shake {
+            0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); } 75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        #tooltip {
+            position: absolute; background: rgba(0, 0, 0, 0.8); color: #fff;
+            padding: 8px 12px; border-radius: 5px; font-size: 14px; max-width: 200px;
+            pointer-events: none; display: none; z-index: 1000; line-height: 1.4;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        
+        .modal-content {
+            background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: left;
+        }
+
+        .modal-content h2 { color: #198754; text-align: center; margin-top: 0; font-size: 1.3rem;}
+        .modal-content label { font-weight: bold; display: block; margin-top: 15px; color: #333; font-size: 0.95rem; }
+        .modal-content textarea {
+            width: 100%; height: 60px; padding: 10px; margin-top: 8px; border: 1px solid #ccc;
+            border-radius: 5px; resize: none; font-family: inherit; box-sizing: border-box;
+        }
+        .btn-submit {
+            background: #0d6efd; color: white; border: none; padding: 12px 20px;
+            font-size: 16px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold;
+        }
+        
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #dc3545; color: #fff; text-align: center;
+            border-radius: 8px; padding: 12px; position: fixed; z-index: 1; top: 30px; left: 50%; transform: translateX(-50%);
+            font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {top: 0; opacity: 0;} to {top: 30px; opacity: 1;} }
+        @keyframes fadeout { from {top: 30px; opacity: 1;} to {top: 0; opacity: 0;} }
+
+        /* 平板直式或小螢幕版面調整 */
+        @media (max-width: 900px) {
+            .game-container { flex-direction: column; }
+            .resource-area { min-height: auto; }
+            .board { min-height: 350px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-controls">
+        <h1>🎮 我的升學藍圖</h1>
+        <button class="btn-fullscreen" onclick="toggleFullScreen()">⛶ 全螢幕模式</button>
+    </div>
+
+    <div class="game-container">
+        <!-- 資源區 -->
+        <div class="resource-area" id="resource-area">
+            <h2>🧩 拼圖庫</h2>
+            <div class="block" draggable="true" data-id="hs">普通高中</div>
+            <div class="block" draggable="true" data-id="chs">綜合高中</div>
+            <div class="block" draggable="true" data-id="ths">技術型高中/高職</div>
+            <div class="block" draggable="true" data-id="v5">五專</div>
+            <div class="block" draggable="true" data-id="prep">中正預校</div>
+            <div class="block" draggable="true" data-id="sev">七年制學校</div>
+            <div class="block" draggable="true" data-id="uni">一般大學</div>
+            <div class="block" draggable="true" data-id="techuni">科技大學</div>
+            <div class="block" draggable="true" data-id="c2">二專</div>
+            <div class="block" draggable="true" data-id="t2">二技</div>
+            <div class="block" draggable="true" data-id="mil">軍官學校</div>
+            <div class="block" draggable="true" data-id="mas">碩士班</div>
+            <div class="block" draggable="true" data-id="phd">博士班</div>
+            <div class="block" draggable="true" data-id="job">就業</div>
+        </div>
+
+        <!-- 任務區 -->
+        <div class="task-area">
+            <div class="y-axis">
+                <span>年紀</span><span>22</span><span>20</span><span>18</span><span>15</span>
+            </div>
+            <div class="board" id="board">
+                <div class="dropzone" id="dz-phd" data-accept="phd"></div>
+                <div class="dropzone" id="dz-mas" data-accept="mas"></div>
+                <div class="dropzone" id="dz-uni" data-accept="uni"></div>
+                <div class="dropzone" id="dz-techuni" data-accept="techuni"></div>
+                <div class="dropzone" id="dz-t2" data-accept="t2"></div>
+                <div class="dropzone" id="dz-c2" data-accept="c2"></div>
+                <div class="dropzone" id="dz-v5" data-accept="v5"></div>
+                <div class="dropzone" id="dz-hs" data-accept="hs"></div>
+                <div class="dropzone" id="dz-chs" data-accept="chs"></div>
+                <div class="dropzone" id="dz-ths" data-accept="ths"></div>
+                <div class="dropzone" id="dz-prep" data-accept="prep"></div>
+                <div class="dropzone" id="dz-mil" data-accept="mil"></div>
+                <div class="dropzone" id="dz-sev" data-accept="sev"></div>
+                <div class="dropzone" id="dz-job" data-accept="job"></div>
+            </div>
+            <div class="arrow-up">
+                <span>⬆</span><span>⬆</span><span>⬆</span><span>⬆</span><span>⬆</span><span>⬆</span><span>⬆</span>
+            </div>
+            <div class="x-axis">國中畢業</div>
+        </div>
+    </div>
+
+    <div id="tooltip"></div>
+    <div id="toast"></div>
+
+    <!-- 課後收斂對話框 -->
+    <div class="modal-overlay" id="end-modal">
+        <div class="modal-content">
+            <h2>🎉 恭喜完成！你的藍圖是？</h2>
+            <label for="q1">📍 Q1：從國中畢業開始，你目前最想挑戰的「升學路」是什麼呢？</label>
+            <textarea id="q1" placeholder="例如：我想讀技術型高中，考科技大學..."></textarea>
+            
+            <label for="q2">❓ Q2：對於剛剛圖表裡的學制，你還有什麼「好奇」或「擔心」的問題嗎？</label>
+            <textarea id="q2" placeholder="例如：我想讀軍校，體能要求會很高嗎？"></textarea>
+            
+            <button class="btn-submit" onclick="submitReflection()">🚀 送出我的未來航線</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 初始化：隨機打亂拼圖區 ---
+        document.addEventListener("DOMContentLoaded", () => {
+            const resourceArea = document.getElementById('resource-area');
+            const blocks = Array.from(resourceArea.querySelectorAll('.block'));
+            // 隨機排序
+            blocks.sort(() => Math.random() - 0.5);
+            // 重新加入節點即可改變順序
+            blocks.forEach(block => resourceArea.appendChild(block));
+        });
+
+        // --- 全螢幕功能 ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`無法進入全螢幕：${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        const dictionary = {
+            "v5": "【五專】修業五年。畢業後可報考二技。", "c2": "【二專】修業二年。畢業後可報考二技。",
+            "t2": "【二技】招收專科學校畢業生，修業二年。", "prep": "【中正預校】招收國中畢業生，僅限男性。",
+            "mil": "【軍官學校】由五所軍事學校聯合招生。", "mas": "【碩士班】招收大學畢業生入學。",
+            "sev": "【七年制學校】國中畢業直升大學藝術學系，修業七年。"
+        };
+
+        const totalBlocks = 14; let placedBlocks = 0;
+        const tooltip = document.getElementById('tooltip');
+        const blocks = document.querySelectorAll('.block');
+
+        // 平板與滑鼠共用的 Tooltip 觸發 (平板可用長按或輕觸模擬)
+        blocks.forEach(block => {
+            block.addEventListener('mouseenter', (e) => {
+                const id = e.target.dataset.id;
+                if(dictionary[id]) { tooltip.innerHTML = dictionary[id]; tooltip.style.display = 'block'; }
+            });
+            block.addEventListener('mousemove', (e) => {
+                tooltip.style.left = e.pageX + 15 + 'px'; tooltip.style.top = e.pageY + 15 + 'px';
+            });
+            block.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+            
+            block.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', e.target.dataset.id);
+                setTimeout(() => e.target.style.opacity = '0.5', 0);
+            });
+            block.addEventListener('dragend', (e) => { e.target.style.opacity = '1'; });
+        });
+
+        const dropzones = document.querySelectorAll('.dropzone');
+        const toast = document.getElementById('toast');
+
+        function showToast(msg) {
+            toast.innerText = msg; toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        dropzones.forEach(zone => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (!zone.hasChildNodes() || (zone.childNodes.length === 1 && zone.childNodes[0].nodeType === 3)) {
+                    zone.classList.add('drag-over');
+                }
+            });
+            zone.addEventListener('dragleave', () => { zone.classList.remove('drag-over'); });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault(); zone.classList.remove('drag-over');
+                const draggedId = e.dataTransfer.getData('text/plain');
+                const targetAccept = zone.dataset.accept;
+
+                if (draggedId === targetAccept) {
+                    const block = document.querySelector(`.block[data-id="${draggedId}"]`);
+                    zone.innerHTML = ''; zone.appendChild(block);
+                    block.setAttribute('draggable', 'false'); 
+                    placedBlocks++;
+                    if(placedBlocks === totalBlocks) { setTimeout(() => { document.getElementById('end-modal').style.display = 'flex'; }, 500); }
+                } else {
+                    zone.classList.add('error'); setTimeout(() => zone.classList.remove('error'), 400);
+                    let errorMsg = "❌ 放錯囉！請觀察年紀或修業長度。";
+                    if (draggedId === 'prep') errorMsg = "💡 中正預校招收『國中畢業生』喔！";
+                    if (draggedId === 'mil') errorMsg = "💡 軍官學校招收『高中職畢業生』！";
+                    showToast(errorMsg);
+                }
+            });
+        });
+
+        // --- 提交至 Google 表單處理 ---
+        function submitReflection() {
+            const q1 = encodeURIComponent(document.getElementById('q1').value);
+            const q2 = encodeURIComponent(document.getElementById('q2').value);
+            
+            if(!q1 || !q2) { alert('請填寫完兩個問題喔！'); return; }
+            
+            // 老師請替換此段 URL！
+            // 請將 YOUR_FORM_ID 換成表單ID，並將 entry.111111 與 entry.222222 換成表單對應的題目參數
+            // 產生方式：在 Google表單右上角點選「取得預先填寫的連結」
+            const GOOGLE_FORM_URL = `https://docs.google.com/forms/d/e/YOUR_FORM_ID/viewform?entry.111111=${q1}&entry.222222=${q2}`;
+            
+            // 開啟預先填好答案的表單，讓學生確認並點擊提交
+            window.open(GOOGLE_FORM_URL, '_blank');
+            document.getElementById('end-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
