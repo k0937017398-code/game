@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>魔數機器 - 函數奧秘探索遊戲</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary-bg: #0b0f19;
+      --card-bg: rgba(20, 27, 45, 0.88);
+      --accent-color: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #080c14 100%);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      height: 60px;
+      padding: 0 1.5rem;
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #38bdf8;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+    }
+
+    .logo i {
+      font-size: 1.8rem;
+      color: #fbbf24;
+    }
+
+    .nav-robots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .robot-tab {
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-sub);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .robot-tab:hover {
+      background: #334155;
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .robot-tab.active {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      border-color: #7dd3fc;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    .robot-tab .badge-check {
+      display: none;
+      color: #4ade80;
+    }
+    .robot-tab.completed .badge-check {
+      display: inline-block;
+    }
+
+    .game-container {
+      flex: 1;
+      height: calc(100vh - 60px);
+      max-width: 1500px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+      /* 加寬左右兩側面板以容納放大的字體 */
+      display: grid;
+      grid-template-columns: 340px 1fr 380px; 
+      gap: 1rem;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 1.2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .ball-pool-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .pool-hopper {
+      background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.8));
+      border: 2px solid rgba(56, 189, 248, 0.3);
+      border-radius: 18px;
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      align-content: flex-start;
+      position: relative;
+      overflow-y: auto;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .pool-hopper::before {
+      content: 'ENERGY INPUT HOPPER';
+      position: absolute;
+      bottom: 6px;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: rgba(56, 189, 248, 0.4);
+      font-weight: 900;
+    }
+
+    /* 放大輸入球與數字 */
+    .ball {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 2.2rem;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      cursor: pointer;
+      box-shadow: inset -4px -6px 12px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.7), 0 8px 16px rgba(0,0,0,0.4);
+      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .ball:hover {
+      transform: scale(1.15) translateY(-4px);
+      box-shadow: inset -4px -6px 12px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.7), 0 12px 24px rgba(56, 189, 248, 0.5);
+    }
+
+    .ball:active {
+      transform: scale(0.92);
+    }
+
+    .ball-c1 { background: radial-gradient(circle at 32% 32%, #ff8585, #dc2626 60%, #7f1d1d); }
+    .ball-c2 { background: radial-gradient(circle at 32% 32%, #fde047, #d97706 60%, #78350f); }
+    .ball-c3 { background: radial-gradient(circle at 32% 32%, #86efac, #16a34a 60%, #14532d); }
+    .ball-c4 { background: radial-gradient(circle at 32% 32%, #7dd3fc, #0284c7 60%, #0c4a6e); }
+    .ball-c5 { background: radial-gradient(circle at 32% 32%, #e9d5ff, #9333ea 60%, #581c87); }
+    .ball-c6 { background: radial-gradient(circle at 32% 32%, #fbcfe8, #db2777 60%, #831843); }
+
+    .custom-input-box {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .custom-input-box input {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 1.3rem; /* 放大輸入框文字 */
+      font-weight: 700;
+      outline: none;
+    }
+
+    .custom-input-box input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56,189,248,0.3);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+
+    .arena-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .robot-display-card {
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.85), rgba(11, 15, 25, 0.95));
+      border-radius: 20px;
+      border: 2px solid rgba(56, 189, 248, 0.2);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .robot-header-info {
+      text-align: center;
+    }
+
+    .robot-name {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #fbbf24;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+    }
+
+    .robot-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-sub);
+    }
+
+    .robot-stage {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 380px;
+    }
+
+    .robot-svg-wrapper {
+      width: 320px;
+      height: 330px;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+
+    .funnel-zone {
+      position: absolute;
+      top: 10px;
+      left: 10%;
+      padding: 8px 14px;
+      border: 2px dashed rgba(251, 191, 36, 0.6);
+      border-radius: 20px;
+      color: #fbbf24;
+      font-size: 1.1rem;
+      font-weight: 800;
+      background: rgba(251, 191, 36, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chute-zone {
+      position: absolute;
+      bottom: 10px;
+      right: 10%;
+      padding: 8px 14px;
+      border: 2px dashed rgba(74, 222, 128, 0.6);
+      border-radius: 20px;
+      color: #4ade80;
+      font-size: 1.1rem;
+      font-weight: 800;
+      background: rgba(74, 222, 128, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 放大掉落的動畫球 */
+    .rolling-ball {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 2.2rem;
+      color: white;
+      z-index: 10;
+      pointer-events: none;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+      opacity: 0;
+    }
+
+    .status-banner {
+      width: 100%;
+      text-align: center;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .history-container {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      margin-bottom: 1.5rem;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    /* 放大表格標題 */
+    .history-table th {
+      background: rgba(15, 23, 42, 0.9);
+      color: #38bdf8;
+      padding: 12px;
+      font-size: 1.2rem;
+      border-bottom: 2px solid #334155;
+      position: sticky;
+      top: 0;
+    }
+
+    /* 大幅放大表格內的數字 */
+    .history-table td {
+      padding: 12px;
+      text-align: center;
+      border-bottom: 1px solid #1e293b;
+      font-weight: 700;
+      font-size: 2rem; 
+    }
+
+    .guess-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .formula-builder {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      background: #0f172a;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+    }
+
+    /* 放大公式前綴字與符號 */
+    .formula-prefix {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #fbbf24;
+    }
+
+    /* 放大選單與選單內的數字 */
+    .select-op, .select-val {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #475569;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.6rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-op:focus, .select-val:focus {
+      border-color: #38bdf8;
+    }
+
+    .btn-submit-guess {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 1.3rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-submit-guess:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+
+    .toast-msg {
+      position: fixed;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(225, 29, 72, 0.95);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 1.2rem;
+      box-shadow: 0 8px 25px rgba(225, 29, 72, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 200;
+    }
+
+    .toast-msg.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 12, 20, 0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 2px solid #38bdf8;
+      border-radius: 24px;
+      padding: 2.5rem;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(56, 189, 248, 0.4);
+      transform: scale(0.85);
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .modal-icon-badge {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: #fff;
+      box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+    }
+
+    .modal-title {
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-formula-card {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      padding: 1.2rem;
+      font-size: 2rem;
+      font-weight: 900;
+      color: #38bdf8;
+      margin: 1.5rem 0;
+      letter-spacing: 1px;
+    }
+
+    .modal-concept-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+      font-size: 1.2rem;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(56,189,248,0.5)); }
+      50% { transform: scale(1.02); filter: drop-shadow(0 0 15px rgba(56,189,248,0.8)); }
+    }
+
+    @keyframes eyeScan {
+      0%, 100% { fill: #38bdf8; }
+      50% { fill: #f43f5e; }
+    }
+
+    @keyframes spinGear {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes floatZen {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .robot-working { animation: pulseGlow 0.4s infinite; }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 99;
+    }
+
+    @media (max-width: 1024px) {
+      body { height: auto; overflow-y: auto; }
+      .game-container { grid-template-columns: 1fr; height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="toast-msg" id="toastMsg">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="toastText">規則不太對喔！觀察看看紀錄再試一次！</span>
+  </div>
+
+  <header>
+    <div class="logo">
+      <i class="fa-solid fa-robot"></i>
+      <span>魔數機器 Magic Function</span>
+    </div>
+    <div class="nav-robots" id="robotTabs">
+      <!-- Tabs rendered via JS -->
+    </div>
+  </header>
+
+  <div class="game-container">
+    
+    <!-- Left: Designer Ball Hopper -->
+    <div class="panel-card ball-pool-container">
+      <div class="panel-title">
+        <i class="fa-solid fa-circle-dot"></i> 數字球池 (Input Pool)
+      </div>
+      <p style="font-size:1rem; color:var(--text-sub);">
+        點擊球體，投入機器入口進行運算！
+      </p>
+
+      <div class="pool-hopper" id="ballPool">
+        <!-- Balls rendered by JS -->
+      </div>
+
+      <div class="panel-title" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+        <i class="fa-solid fa-keyboard"></i> 自訂數字輸入
+      </div>
+      <div class="custom-input-box">
+        <input type="number" id="customNum" placeholder="輸入數字..." />
+        <button class="btn-action" id="btnCustomDrop">投入</button>
+      </div>
+    </div>
+
+    <!-- Center: Interactive Machine Arena -->
+    <div class="arena-container">
+      <div class="robot-display-card" id="robotCard">
+        <div class="robot-header-info">
+          <div class="robot-name" id="robotName">機器人一號</div>
+          <div class="robot-subtitle" id="robotDesc">正在等待輸入數字...</div>
+        </div>
+
+        <div class="robot-stage">
+          <div class="funnel-zone">
+            <i class="fa-solid fa-arrow-down-long"></i> 入口 (x)
+          </div>
+
+          <div class="robot-svg-wrapper" id="robotSvgContainer">
+            <!-- Unique SVG injected dynamically -->
+          </div>
+
+          <div class="chute-zone">
+            出口 (y) <i class="fa-solid fa-arrow-down-long"></i>
+          </div>
+
+          <div class="rolling-ball ball-c1" id="animBall">0</div>
+        </div>
+
+        <div class="status-banner" id="statusDisplay">
+          <span style="color:#38bdf8; font-weight:700; font-size:1.2rem;"><i class="fa-solid fa-lightbulb"></i> 提示：</span>
+          <span style="color:#e2e8f0; font-size:1.2rem;" id="statusText">投入多個數字，觀察右側結果轉換表規律！</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: History & Formula Guessing -->
+    <div class="panel-card">
+      <div class="panel-title">
+        <i class="fa-solid fa-list-check"></i> 運算轉換紀錄 (f(x) Record)
+      </div>
+      
+      <div class="history-container">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>輸入 (x)</th>
+              <th>➔</th>
+              <th>輸出 (y)</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            <!-- Table rows added dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-title">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> 猜猜看隱藏公式！
+      </div>
+
+      <div class="guess-box" id="guessBox">
+        <!-- Dynamic guess controls -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sleek Win Modal -->
+  <div class="modal-overlay" id="winModal">
+    <div class="modal-card">
+      <div class="modal-icon-badge">
+        <i class="fa-solid fa-award"></i>
+      </div>
+      <div class="modal-title" id="modalTitle">太棒了！破解成功！</div>
+      <div style="font-size:1.2rem; color:var(--text-sub);">你成功找出這台機器人的運算機制：</div>
+      
+      <div class="modal-formula-card" id="modalFormula">
+        y = x + 5
+      </div>
+
+      <div class="modal-concept-box" id="modalConcept">
+        <!-- Concept logic explanation -->
+      </div>
+
+      <button class="btn-action" style="width:100%; padding:16px; font-size:1.3rem;" id="btnNextLevel">
+        挑戰下一台機器人 <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const ROBOT_CONFIGS = [
+      {
+        id: 0,
+        name: "加加號 Alpha",
+        subtitle: "基礎算術轉換型",
+        color: "#38bdf8",
+        formulaText: "y = x + 5",
+        ruleType: "simple",
+        calc: (x) => x + 5,
+        optionsOp: ["+", "-", "×"],
+        optionsVal: [2, 3, 5, 7, 10],
+        correctOp: "+",
+        correctVal: 5,
+        concept: "<b>【加法函數 y = x + 5】</b><br>每當你輸入一個數字 x，機器人在內部幫它加上 5，然後輸出結果 y。"
+      },
+      {
+        id: 1,
+        name: "粉碎號 Beta",
+        subtitle: "重裝能量削減型",
+        color: "#f43f5e",
+        formulaText: "y = x - 7",
+        ruleType: "simple",
+        calc: (x) => x - 7,
+        optionsOp: ["+", "-", "×"],
+        optionsVal: [3, 5, 7, 8, 12],
+        correctOp: "-",
+        correctVal: 7,
+        concept: "<b>【減法函數 y = x - 7】</b><br>輸入數字後，機器人會扣除 7 單位。如果輸入小於 7 的數字，還會得到負數喔！"
+      },
+      {
+        id: 2,
+        name: "特斯拉 Gamma",
+        subtitle: "高壓倍數放大型",
+        color: "#fbbf24",
+        formulaText: "y = x × 2",
+        ruleType: "simple",
+        calc: (x) => x * 2,
+        optionsOp: ["+", "-", "×"],
+        optionsVal: [2, 3, 4, 5, 10],
+        correctOp: "×",
+        correctVal: 2,
+        concept: "<b>【倍數函數 y = 2x】</b><br>這台機器人會把數字翻倍！在數學中，這是一條過原點的成正比直線函數。"
+      },
+      {
+        id: 3,
+        name: "雙核 Delta",
+        subtitle: "雙重複合運算型",
+        color: "#c084fc",
+        formulaText: "y = (x - 5) × 3",
+        ruleType: "compound",
+        calc: (x) => (x - 5) * 3,
+        optionsVal1: [2, 3, 5, 7],
+        optionsVal2: [2, 3, 4, 5],
+        correctVal1: 5,
+        correctVal2: 3,
+        concept: "<b>【複合函數 y = (x - 5) × 3】</b><br>先進行減法（減去 5），再進行乘法（乘以 3）。多步驟運算也是很常見的函數規律！"
+      },
+      {
+        id: 4,
+        name: "禪心 Omega",
+        subtitle: "心靈環保常數型",
+        color: "#4ade80",
+        formulaText: "y = 7 (常數)",
+        ruleType: "constant",
+        calc: (x) => 7,
+        optionsVal: [0, 5, 7, 10, 100],
+        correctVal: 7,
+        concept: "<b>【常數函數 y = 7】</b><br>這是一台非常特別的機器人！<b>不論輸入什麼數字，輸出永遠是 7</b>。<br>就像法鼓山『心靈環保』理念：<b>無論外界如何變化、遇到何種數字，都照顧好自己的心，保持內心的穩定與平靜！</b>"
+      }
+    ];
+
+    function getRobotSvg(index) {
+      if (index === 0) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <line x1="140" y1="45" x2="140" y2="15" stroke="#38bdf8" stroke-width="4" />
+            <circle cx="140" cy="12" r="9" fill="#38bdf8" />
+            <rect x="70" y="45" width="140" height="90" rx="45" fill="#1e293b" stroke="#38bdf8" stroke-width="4"/>
+            <rect x="90" y="65" width="100" height="50" rx="25" fill="#090d16"/>
+            <circle cx="115" cy="90" r="10" fill="#38bdf8" style="animation: eyeScan 1.5s infinite;" />
+            <circle cx="165" cy="90" r="10" fill="#38bdf8" style="animation: eyeScan 1.5s infinite;" />
+            <rect x="65" y="145" width="150" height="115" rx="30" fill="#0f172a" stroke="#38bdf8" stroke-width="4"/>
+            <circle cx="140" cy="200" r="28" fill="#1e293b" stroke="#0284c7" stroke-width="3"/>
+            <path d="M140 188 L146 198 L158 198 L148 205 L152 216 L140 209 L128 216 L132 205 L122 198 L134 198 Z" fill="#fbbf24"/>
+            <path d="M 30 35 L 75 65 L 75 155" fill="none" stroke="#fbbf24" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 205 220 L 250 220 L 250 260" fill="none" stroke="#4ade80" stroke-width="8" stroke-linecap="round"/>
+          </svg>`;
+      } else if (index === 1) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <polygon points="70,40 90,65 50,65" fill="#f43f5e" />
+            <polygon points="210,40 190,65 230,65" fill="#f43f5e" />
+            <polygon points="80,65 200,65 220,130 60,130" fill="#1e293b" stroke="#f43f5e" stroke-width="4"/>
+            <polygon points="90,80 190,80 200,110 80,110" fill="#000" />
+            <line x1="95" y1="95" x2="185" y2="95" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
+            <polygon points="50,140 230,140 210,260 70,260" fill="#0f172a" stroke="#f43f5e" stroke-width="4"/>
+            <rect x="90" y="165" width="100" height="55" fill="#1e293b" stroke="#e11d48" stroke-width="3"/>
+            <line x1="100" y1="165" x2="130" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <line x1="130" y1="165" x2="160" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <line x1="160" y1="165" x2="190" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <path d="M 30 35 L 75 80 L 75 160" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 200 230 L 250 230 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else if (index === 2) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <rect x="75" y="15" width="14" height="40" fill="#fbbf24"/>
+            <circle cx="82" cy="15" r="12" fill="#f59e0b"/>
+            <rect x="191" y="15" width="14" height="40" fill="#fbbf24"/>
+            <circle cx="198" cy="15" r="12" fill="#f59e0b"/>
+            <rect x="85" y="45" width="110" height="90" rx="15" fill="#1e293b" stroke="#fbbf24" stroke-width="4"/>
+            <ellipse cx="140" cy="85" rx="35" ry="20" fill="#090d16" stroke="#fbbf24" stroke-width="2"/>
+            <circle cx="140" cy="85" r="12" fill="#fbbf24"/>
+            <path d="M70 145 L210 145 L180 260 L100 260 Z" fill="#0f172a" stroke="#fbbf24" stroke-width="4"/>
+            <polygon points="140,165 165,210 115,210" fill="#d97706" stroke="#fef08a" stroke-width="3"/>
+            <path d="M 30 35 L 75 65 L 75 155" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 175 230 L 250 230 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else if (index === 3) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <rect x="70" y="40" width="60" height="70" rx="10" fill="#1e293b" stroke="#c084fc" stroke-width="3"/>
+            <rect x="150" y="40" width="60" height="70" rx="10" fill="#1e293b" stroke="#c084fc" stroke-width="3"/>
+            <circle cx="100" cy="70" r="8" fill="#c084fc"/>
+            <circle cx="180" cy="70" r="8" fill="#c084fc"/>
+            <rect x="120" y="60" width="40" height="15" fill="#9333ea"/>
+            <rect x="55" y="125" width="170" height="130" rx="16" fill="#0f172a" stroke="#c084fc" stroke-width="4"/>
+            <g style="animation: spinGear 3s linear infinite;" transform-origin="105 185">
+              <circle cx="105" cy="185" r="22" stroke="#c084fc" stroke-width="6" fill="none" stroke-dasharray="10,6"/>
+            </g>
+            <g style="animation: spinGear 3s linear infinite reverse;" transform-origin="170 185">
+              <circle cx="170" cy="185" r="22" stroke="#e9d5ff" stroke-width="6" fill="none" stroke-dasharray="10,6"/>
+            </g>
+            <path d="M 25 30 L 65 60 L 65 140" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 215 220 L 255 220 L 255 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%" style="animation: floatZen 3s ease-in-out infinite;">
+            <ellipse cx="140" cy="30" rx="50" ry="12" fill="none" stroke="#4ade80" stroke-width="4" opacity="0.8"/>
+            <ellipse cx="140" cy="75" rx="45" ry="35" fill="#1e293b" stroke="#4ade80" stroke-width="4"/>
+            <polygon points="140,55 147,68 140,81 133,68" fill="#4ade80"/>
+            <line x1="115" y1="85" x2="130" y2="85" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+            <line x1="150" y1="85" x2="165" y2="85" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+            <path d="M95 120 C95 120, 140 135, 185 120 C195 160, 190 220, 140 230 C90 220, 85 160, 95 120 Z" fill="#0f172a" stroke="#4ade80" stroke-width="4"/>
+            <path d="M70 240 Q140 275 210 240 Q140 290 70 240 Z" fill="#15803d" stroke="#86efac" stroke-width="3"/>
+            <path d="M 30 35 L 85 65 L 85 140" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 180 220 L 250 220 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      }
+    }
+
+    let currentRobotIndex = 0;
+    let robotHistory = [[], [], [], [], []];
+    let robotCompleted = [false, false, false, false, false];
+    let isProcessing = false;
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      const now = audioCtx.currentTime;
+      if (type === 'drop') {
+        osc.frequency.setValueAtTime(450, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      } else if (type === 'process') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.linearRampToValueAtTime(550, now + 0.45);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.45);
+      } else if (type === 'win') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.12);
+        osc.frequency.setValueAtTime(783.99, now + 0.24);
+        osc.frequency.setValueAtTime(1046.50, now + 0.38);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.7);
+        osc.start(now);
+        osc.stop(now + 0.7);
+      } else if (type === 'wrong') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.setValueAtTime(160, now + 0.15);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      }
+    }
+
+    function initUI() {
+      renderRobotTabs();
+      renderBallPool();
+      loadRobot(0);
+    }
+
+    function renderRobotTabs() {
+      const nav = document.getElementById("robotTabs");
+      nav.innerHTML = ROBOT_CONFIGS.map((r, i) => `
+        <div class="robot-tab ${i === currentRobotIndex ? 'active' : ''} ${robotCompleted[i] ? 'completed' : ''}" onclick="switchRobot(${i})">
+          <i class="fa-solid fa-robot"></i>
+          <span>機器人 ${i + 1} 號</span>
+          <i class="fa-solid fa-circle-check badge-check"></i>
+        </div>
+      `).join('');
+    }
+
+    function renderBallPool() {
+      const pool = document.getElementById("ballPool");
+      const defaultNumbers = [8, 12, 30, 50, 6, 15, 2, 9];
+      const colors = ['ball-c1', 'ball-c2', 'ball-c3', 'ball-c4', 'ball-c5', 'ball-c6'];
+
+      pool.innerHTML = defaultNumbers.map((num, idx) => `
+        <div class="ball ${colors[idx % colors.length]}" onclick="processBall(${num}, '${colors[idx % colors.length]}')">
+          ${num}
+        </div>
+      `).join('');
+    }
+
+    function loadRobot(index) {
+      currentRobotIndex = index;
+      renderRobotTabs();
+
+      const config = ROBOT_CONFIGS[index];
+      document.getElementById("robotName").innerText = config.name;
+      document.getElementById("robotName").style.color = config.color;
+      document.getElementById("robotDesc").innerText = config.subtitle;
+      document.getElementById("robotSvgContainer").innerHTML = getRobotSvg(index);
+
+      renderHistory();
+      renderGuessControls();
+    }
+
+    function switchRobot(index) {
+      if (isProcessing) return;
+      loadRobot(index);
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById("historyBody");
+      const history = robotHistory[currentRobotIndex];
+
+      if (history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="color:var(--text-sub); font-size:1.1rem; padding:15px;">尚無轉換紀錄<br>請投入左側數字球！</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = history.map(item => `
+        <tr>
+          <td style="color:#fbbf24;">${item.input}</td>
+          <td style="color:var(--text-sub);"><i class="fa-solid fa-arrow-right-long"></i></td>
+          <td style="color:#4ade80;">${item.output}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderGuessControls() {
+      const box = document.getElementById("guessBox");
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+
+      if (config.ruleType === "simple") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix">y = x</span>
+            <select class="select-op" id="guessOp">
+              ${config.optionsOp.map(op => `<option value="${op}">${op}</option>`).join('')}
+            </select>
+            <select class="select-val" id="guessVal">
+              ${config.optionsVal.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 送出猜測
+          </button>
+        `;
+      } else if (config.ruleType === "compound") {
+        box.innerHTML = `
+          <div class="formula-builder" style="font-size:1.1rem;">
+            <span class="formula-prefix">y = ( x - </span>
+            <select class="select-val" id="guessVal1">
+              ${config.optionsVal1.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+            <span class="formula-prefix"> ) × </span>
+            <select class="select-val" id="guessVal2">
+              ${config.optionsVal2.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 送出猜測
+          </button>
+        `;
+      } else if (config.ruleType === "constant") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix" style="font-size: 1.2rem;">不論 x 為何， y 永遠為 </span>
+            <select class="select-val" id="guessValConst">
+              ${config.optionsVal.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 送出猜測
+          </button>
+        `;
+      }
+    }
+
+    function processBall(inputVal, ballClass) {
+      if (isProcessing) return;
+      isProcessing = true;
+
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+      const outputVal = config.calc(inputVal);
+
+      const animBall = document.getElementById("animBall");
+      const robotCard = document.getElementById("robotCard");
+      const statusText = document.getElementById("statusText");
+
+      animBall.className = `rolling-ball ${ballClass}`;
+      animBall.innerText = inputVal;
+      animBall.style.opacity = '1';
+      animBall.style.left = '12%';
+      animBall.style.top = '15px';
+      
+      playSound('drop');
+      statusText.innerText = `正在投入數字 ${inputVal}...`;
+
+      setTimeout(() => {
+        animBall.style.transition = 'all 0.45s ease-in';
+        animBall.style.left = '28%';
+        animBall.style.top = '110px';
+        animBall.style.transform = 'scale(0.65)';
+      }, 100);
+
+      setTimeout(() => {
+        animBall.style.opacity = '0';
+        robotCard.classList.add('robot-working');
+        statusText.innerText = `🤖 機器人核心正在運算中...`;
+        playSound('process');
+      }, 550);
+
+      setTimeout(() => {
+        robotCard.classList.remove('robot-working');
+        animBall.innerText = outputVal;
+        animBall.style.transition = 'none';
+        animBall.style.left = '64%';
+        animBall.style.top = '180px';
+        animBall.style.transform = 'scale(0.65)';
+        animBall.style.opacity = '1';
+
+        setTimeout(() => {
+          animBall.style.transition = 'all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+          animBall.style.left = '72%';
+          animBall.style.top = '225px';
+          animBall.style.transform = 'scale(1.1)';
+          playSound('drop');
+          statusText.innerText = `計算完畢！輸出結果為 ${outputVal}`;
+
+          robotHistory[currentRobotIndex].unshift({ input: inputVal, output: outputVal });
+          renderHistory();
+          isProcessing = false;
+        }, 100);
+
+      }, 1450);
+    }
+
+    document.getElementById("btnCustomDrop").addEventListener("click", () => {
+      const input = document.getElementById("customNum");
+      const val = parseInt(input.value);
+      if (!isNaN(val)) {
+        processBall(val, 'ball-c4');
+        input.value = '';
+      }
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById("toastMsg");
+      document.getElementById("toastText").innerText = msg;
+      toast.classList.add("active");
+      setTimeout(() => {
+        toast.classList.remove("active");
+      }, 2500);
+    }
+
+    function checkGuess() {
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+      let isCorrect = false;
+
+      if (config.ruleType === "simple") {
+        const op = document.getElementById("guessOp").value;
+        const val = parseInt(document.getElementById("guessVal").value);
+        if (op === config.correctOp && val === config.correctVal) isCorrect = true;
+      } else if (config.ruleType === "compound") {
+        const v1 = parseInt(document.getElementById("guessVal1").value);
+        const v2 = parseInt(document.getElementById("guessVal2").value);
+        if (v1 === config.correctVal1 && v2 === config.correctVal2) isCorrect = true;
+      } else if (config.ruleType === "constant") {
+        const v = parseInt(document.getElementById("guessValConst").value);
+        if (v === config.correctVal) isCorrect = true;
+      }
+
+      if (isCorrect) {
+        playSound('win');
+        triggerConfetti();
+        robotCompleted[currentRobotIndex] = true;
+        renderRobotTabs();
+
+        document.getElementById("modalTitle").innerText = `🎉 破解成功！`;
+        document.getElementById("modalFormula").innerText = config.formulaText;
+        document.getElementById("modalConcept").innerHTML = config.concept;
+        document.getElementById("winModal").classList.add("active");
+      } else {
+        playSound('wrong');
+        showToast("規則不太對喔！多投幾顆數字球觀察右側轉換紀錄吧！");
+      }
+    }
+
+    document.getElementById("btnNextLevel").addEventListener("click", () => {
+      document.getElementById("winModal").classList.remove("active");
+      if (currentRobotIndex < ROBOT_CONFIGS.length - 1) {
+        switchRobot(currentRobotIndex + 1);
+      }
+    });
+
+    function triggerConfetti() {
+      const canvas = document.getElementById("confetti-canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#f87171', '#fbbf24', '#4ade80', '#38bdf8', '#c084fc'];
+
+      for (let i = 0; i < 90; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 14,
+          vy: (Math.random() - 0.8) * 14,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let active = false;
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.22;
+          p.alpha -= 0.016;
+
+          if (p.alpha > 0) {
+            active = true;
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+
+        if (active) requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    window.onload = initUI;
+  </script>
+</body>
+</html>
