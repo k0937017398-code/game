@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巧織當下數 - 邏輯大冒險</title>
+    <style>
+        :root {
+            --bg-color: #f7f9fc;
+            --paper-color: #ffffff;
+            --grid-line: #cbd5e1;
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --accent: #f59e0b;
+            --text-main: #1e293b;
+            --locked: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin: 5px 0;
+            color: #1e3a8a;
+            font-size: 1.5rem;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+
+        /* 畫面切換 */
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 650px;
+            flex-direction: column;
+            align-items: center;
+            height: calc(100vh - 60px);
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        /* 關卡地圖選單 */
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            width: 100%;
+            max-width: 450px;
+            margin-top: 10px;
+        }
+
+        .level-btn {
+            background-color: var(--paper-color);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .level-btn:hover:not(:disabled) {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .level-btn:disabled {
+            background-color: #e2e8f0;
+            border-color: var(--locked);
+            color: var(--locked);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .level-btn .badge {
+            font-size: 0.75rem;
+            margin-top: 4px;
+            opacity: 0.8;
+        }
+
+        /* 遊戲主畫面 */
+        .game-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: var(--primary-dark); }
+
+        .board-container {
+            background: var(--paper-color);
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            max-height: calc(100vh - 160px);
+        }
+
+        /* Nonogram 棋盤排版 (動態縮放) */
+        .nonogram-table {
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .nonogram-table td, .nonogram-table th {
+            border: 1px solid var(--grid-line);
+            width: var(--cell-size);
+            height: var(--cell-size);
+            min-width: var(--cell-size);
+            min-height: var(--cell-size);
+            padding: 0;
+            font-weight: bold;
+        }
+
+        .hint-cell {
+            background-color: #f1f5f9;
+            color: #475569;
+            white-space: pre-line;
+            line-height: 1.1;
+            font-size: calc(var(--cell-size) * 0.35);
+            vertical-align: bottom;
+            padding-bottom: 2px;
+        }
+
+        .hint-cell-col {
+            background-color: #f1f5f9;
+            color: #475569;
+            white-space: pre-line;
+            line-height: 1.1;
+            font-size: calc(var(--cell-size) * 0.35);
+            vertical-align: middle;
+        }
+
+        .corner-cell {
+            background-color: #e2e8f0;
+            border: 1px solid var(--grid-line);
+        }
+
+        .playable-cell {
+            background-color: #ffffff;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .playable-cell.filled {
+            background-color: #0f172a;
+        }
+
+        .playable-cell.crossed::after {
+            content: "✕";
+            color: #94a3b8;
+            font-size: calc(var(--cell-size) * 0.55);
+        }
+
+        /* 彈窗樣式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-content h2 { margin-top: 0; color: #2563eb; }
+        .modal-content p { font-size: 1.05rem; line-height: 1.5; color: #334155; }
+    </style>
+</head>
+<body>
+
+    <!-- 首頁 / 選單畫面 -->
+    <div id="menu-screen" class="screen active">
+        <h1>巧織當下數</h1>
+        <div class="subtitle">邏輯拼圖大闖關 🧠</div>
+        <p style="text-align: center; color: #64748b; font-size: 0.85rem; max-width: 400px; margin: 0 0 10px 0;">
+            點擊格子填入黑子，再次點擊打叉。依序破關解鎖！
+        </p>
+        <div class="level-grid" id="level-grid"></div>
+    </div>
+
+    <!-- 遊戲畫面 -->
+    <div id="game-screen" class="screen">
+        <div class="game-header">
+            <button class="btn" onclick="backToMenu()">🏠 返回地圖</button>
+            <h3 id="game-title" style="margin: 0;">第 1 關</h3>
+            <button class="btn" onclick="checkVictory()">✨ 驗證答案</button>
+        </div>
+        <div class="board-container">
+            <table class="nonogram-table" id="board"></table>
+        </div>
+        <div style="font-size: 0.8rem; color: #64748b; margin-top: 8px;">💡 提示：點一下填黑 ➔ 點兩下打叉 ➔ 點三下還原空白</div>
+    </div>
+
+    <!-- 訊息彈窗 (通用) -->
+    <div id="msg-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="msg-title">🎉 提示</h2>
+            <p id="msg-text">訊息內容...</p>
+            <button class="btn" id="msg-btn" style="margin-top: 15px; width: 100%;">確定</button>
+        </div>
+    </div>
+
+<script>
+    const levels = [
+        { id: 1, size: 5, 
+          rowHints: [[5], [1,1], [5], [1,1], [5]], 
+          colHints: [[5], [1,1,1], [1,1,1], [1,1,1], [5]],
+          solution: [[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1],[1,0,1,0,1],[1,1,1,1,1]],
+          praise: "「第一關只是小菜一碟，你這波操作很溜喔！保持這個手感，繼續往下衝吧！」" },
+        { id: 2, size: 5, 
+          rowHints: [[1], [5], [1,1], [1,1], [1,2]], 
+          colHints: [[1,1], [1,1], [3], [1], [4]],
+          solution: [[0,0,1,0,0],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,1,1,0]],
+          praise: "「關關難過關關過！連過兩關，數學細胞正在你體內大爆發，隔壁同學都要轉頭看你了啦！」" },
+        { id: 3, size: 7, 
+          rowHints: [[1],[1],[1],[1,1,1],[1,1,1],[1,1,1],[7]], 
+          colHints: [[4],[1],[1],[7],[1],[1],[4]],
+          solution: [[0,0,0,1,0,0,0],[0,0,0,1,0,0,0],[0,0,0,1,0,0,0],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,1,1,1,1,1,1]],
+          praise: "「腦容量瞬間擴充 100GB！進入 7×7 竟然沒被難倒，你的邏輯腦比手機處理器還快，respect！」" },
+        { id: 4, size: 7, 
+          rowHints: [[1],[5],[1],[1],[1,3],[1,1],[7]], 
+          colHints: [[1,1],[1,1],[1,4,1],[7],[1,1],[1],[1]],
+          solution: [[0,0,0,0,0,1,1],[0,0,1,1,1,1,1],[0,0,0,0,0,0,1],[0,0,0,0,0,0,1],[0,1,0,1,1,1,0],[1,1,0,0,0,0,0],[1,1,1,1,1,1,1]],
+          praise: "「帥到掉渣，邏輯大神是你？這題其實蠻機車的，結果你居然輕鬆秒殺，巨星降臨！」" },
+        { id: 5, size: 8, 
+          rowHints: [[1],[2,5],[1],[5],[2,1],[1],[1,1,1],[1,6]], 
+          colHints: [[1],[2,5],[1],[5],[2,1],[1],[1,1,1],[1,6]],
+          solution: [[1,0,0,0,0,0,0,0],[1,1,0,1,1,1,1,1],[1,0,0,0,0,0,0,0],[1,1,1,1,1,0,0,0],[1,1,0,1,0,0,0,0],[1,0,0,0,0,0,0,0],[1,0,1,0,1,0,1,0],[1,1,1,1,1,1,0,0]],
+          praise: "「太狠了！直接登入神壇！8×8 這種魔王級別也擋不住你，智商高達兩百，沒得質疑！」" },
+        { id: 6, size: 9, 
+          rowHints: [[1,1],[3,3],[9],[9],[9],[7],[5],[3],[3]], 
+          colHints: [[3],[5],[7],[7],[7],[7],[7],[7],[5]],
+          solution: [[1,1,0,0,0,0,0,0,1],[1,1,1,0,0,0,1,1,1],[1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,1,0],[0,0,1,1,1,1,1,0,0],[0,0,0,1,1,1,0,0,0],[0,0,0,1,1,1,0,0,0]],
+          praise: "「簡直不講武德，太強了吧！九宮格大戰都被你拿捏得死死的，去當偵探都可以了耶！」" },
+        { id: 7, size: 9, 
+          rowHints: [[1],[7],[1,1],[1,1],[1,1],[5,1],[1],[1],[9]], 
+          colHints: [[1,1,1,1],[2,1,1],[1,1,1,1],[1,1,1,4],[2,1,1],[1,1,1,1],[1,1,1,1],[1,2],[1]],
+          solution: [[0,0,0,1,0,0,0,0,0],[0,1,1,1,1,1,1,1,0],[1,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,1],[1,0,0,0,0,0,0,0,1],[1,1,1,1,1,0,1,0,0],[0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1]],
+          praise: "「太狂不解釋！離通關只差一步！眼神就像看見喜歡的人一樣專注，最後一哩路，衝啊！」" },
+        { id: 8, size: 9, 
+          rowHints: [[1,4],[1,1],[2,4],[2,1,1],[1,6],[1],[1,4],[1,1,1],[1,4]], 
+          colHints: [[1,1,1,1,1,3],[9],[1,5],[1,1],[3,1],[1],[1,3],[3,1],[1]],
+          solution: [[1,0,1,1,1,1,0,0,0],[1,0,0,0,0,0,1,0,0],[1,1,0,1,1,1,1,0,0],[1,1,0,1,0,0,1,0,0],[1,0,1,1,1,1,1,1,0],[0,0,0,0,0,0,0,1,0],[1,0,1,1,1,1,0,0,0],[1,0,1,0,1,0,1,0,0],[1,0,1,1,1,1,0,0,0]],
+          praise: "「準·傳說級玩家誕生！前八關全部通關！你已經不是普通的國中生了，有著數學魂的學霸就是你！」" },
+        { id: 9, size: 11, 
+          rowHints: [[5,5],[1,1,1],[1,3,5],[1,1,1,1],[1,3,5],[1,1,1,1],[1,3,5],[1,1,1,1],[1,3,5],[2,1,1,1,1],[1,1,1,1]], 
+          colHints: [[11],[1],[1],[5],[1],[1],[1],[2],[1],[2],[1]],
+          solution: Array(11).fill(0).map(() => Array(11).fill(1)),
+          praise: "「太扯啦！！！連最大張的 11×11 終極魔王都被你收服了！從今天起，你就是班上的數織扛霸子、邏輯天花板！請接受本大師的頂禮膜拜，太神啦，直接給你尊爵不凡的滿分 Respect！」" }
+    ];
+
+    let currentLevelId = 1;
+    let unlockedLevel = localStorage.getItem('unlockedLevel') ? parseInt(localStorage.getItem('unlockedLevel')) : 1;
+    let playerBoard = [];
+
+    function initMenu() {
+        const grid = document.getElementById('level-grid');
+        grid.innerHTML = '';
+        levels.forEach(lvl => {
+            const btn = document.createElement('button');
+            btn.className = 'level-btn';
+            let isLocked = lvl.id > unlockedLevel;
+            btn.disabled = isLocked;
+            btn.innerHTML = `第 ${lvl.id} 關 <span class="badge">${lvl.size}×${lvl.size}</span> ${isLocked ? '🔒' : '⭐'}`;
+            btn.onclick = () => startLevel(lvl.id);
+            grid.appendChild(btn);
+        });
+    }
+
+    function startLevel(id) {
+        currentLevelId = id;
+        const lvl = levels.find(l => l.id === id);
+        document.getElementById('game-title').innerText = `第 ${id} 關 (${lvl.size}×${lvl.size})`;
+        document.getElementById('menu-screen').classList.remove('active');
+        document.getElementById('game-screen').classList.add('active');
+
+        playerBoard = Array(lvl.size).fill(0).map(() => Array(lvl.size).fill(0));
+        renderBoard();
+    }
+
+    function renderBoard() {
+        const lvl = levels.find(l => l.id === currentLevelId);
+        
+        const maxDim = lvl.size + 3;
+        const availableSize = Math.min(window.innerWidth - 40, window.innerHeight - 180);
+        let calculatedSize = Math.floor(availableSize / maxDim);
+        if (calculatedSize > 48) calculatedSize = 48;
+        if (calculatedSize < 24) calculatedSize = 24;
+        
+        document.documentElement.style.setProperty('--cell-size', calculatedSize + 'px');
+
+        const table = document.getElementById('board');
+        table.innerHTML = '';
+
+        // 1. 上方提示列
+        const topTr = document.createElement('tr');
+        const cornerTh = document.createElement('th');
+        cornerTh.className = 'corner-cell';
+        topTr.appendChild(cornerTh);
+
+        for (let c = 0; c < lvl.size; c++) {
+            const th = document.createElement('th');
+            th.className = 'hint-cell-col';
+            th.innerHTML = (lvl.colHints[c] || []).join('<br>');
+            topTr.appendChild(th);
+        }
+        table.appendChild(topTr);
+
+        // 2. 棋盤主體與左側提示行
+        for (let r = 0; r < lvl.size; r++) {
+            const tr = document.createElement('tr');
+            
+            const th = document.createElement('th');
+            th.className = 'hint-cell';
+            th.innerHTML = (lvl.rowHints[r] || []).join(' ');
+            tr.appendChild(th);
+
+            for (let c = 0; c < lvl.size; c++) {
+                const td = document.createElement('td');
+                td.className = 'playable-cell';
+                updateCellDisplay(td, playerBoard[r][c]);
+                
+                td.onclick = () => {
+                    playerBoard[r][c] = (playerBoard[r][c] + 1) % 3;
+                    updateCellDisplay(td, playerBoard[r][c]);
+                };
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        }
+    }
+
+    function updateCellDisplay(td, val) {
+        td.classList.remove('filled', 'crossed');
+        if (val === 1) {
+            td.classList.add('filled');
+        } else if (val === 2) {
+            td.classList.add('crossed');
+        }
+    }
+
+    function checkVictory() {
+        const lvl = levels.find(l => l.id === currentLevelId);
+        let isCorrect = true;
+
+        for (let r = 0; r < lvl.size; r++) {
+            for (let c = 0; c < lvl.size; c++) {
+                let pVal = playerBoard[r][c] === 1 ? 1 : 0;
+                if (pVal !== lvl.solution[r][c]) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+        }
+
+        if (isCorrect) {
+            if (currentLevelId >= unlockedLevel && unlockedLevel < levels.length) {
+                unlockedLevel = currentLevelId + 1;
+                localStorage.setItem('unlockedLevel', unlockedLevel);
+            }
+            showModal(`🎉 第 ${currentLevelId} 關通關成功！`, lvl.praise, () => {
+                closeModal();
+                backToMenu();
+            });
+        } else {
+            showModal("🤔 哎呀，差一點點囉！", "有些黑子跟提示數字還沒有對應好喔！再仔細檢查看看哪裡需要調整，加油啦！", closeModal);
+        }
+    }
+
+    function showModal(title, text, callback) {
+        document.getElementById('msg-title').innerText = title;
+        document.getElementById('msg-text').innerText = text;
+        const btn = document.getElementById('msg-btn');
+        btn.onclick = callback;
+        document.getElementById('msg-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('msg-modal').style.display = 'none';
+    }
+
+    function backToMenu() {
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        initMenu();
+    }
+
+    initMenu();
+</script>
+
+</body>
+</html>
