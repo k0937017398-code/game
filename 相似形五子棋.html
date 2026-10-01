@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相似形陣地奪奪戰 - 8x8 五子棋版</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- 引入 FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 引入彩帶特效庫 (包含煙火特效) -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        redTeam: '#ef4444',
+                        blueTeam: '#3b82f6',
+                        darkBg: '#0f172a',
+                        tileBg: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(239, 68, 68, 0.1) 0%, transparent 40%);
+            color: white;
+            user-select: none;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        /* 8x8 陣地格樣式 */
+        .grid-card {
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            aspect-ratio: 1 / 1; /* 保持正方形 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            border-radius: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .grid-card:active {
+            transform: scale(0.92);
+        }
+        .card-unclaimed {
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border: 2px solid #475569;
+            color: #94a3b8;
+        }
+        .card-unclaimed:hover {
+            border-color: #94a3b8;
+            color: #f8fafc;
+            background: linear-gradient(135deg, #334155, #475569);
+        }
+        
+        /* 佔領後的樣式 (立體棋子感) */
+        .card-red {
+            background: radial-gradient(circle at 30% 30%, #f87171, #dc2626, #991b1b);
+            border: 2px solid #fca5a5;
+            color: white;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset -4px -4px 10px rgba(0,0,0,0.4), 0 4px 8px rgba(220,38,38,0.5);
+        }
+        .card-blue {
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #2563eb, #1e3a8a);
+            border: 2px solid #93c5fd;
+            color: white;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset -4px -4px 10px rgba(0,0,0,0.4), 0 4px 8px rgba(37,99,235,0.5);
+        }
+        .card-dead {
+            background: repeating-linear-gradient(45deg, #0f172a, #0f172a 10px, #1e293b 10px, #1e293b 20px);
+            border: 2px dashed #475569;
+            color: #475569;
+            opacity: 0.6;
+        }
+
+        /* 五子連線高光特效 */
+        .win-line-highlight {
+            animation: winPulse 1s infinite alternate;
+            z-index: 10;
+        }
+        @keyframes winPulse {
+            0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 10px currentColor; }
+            100% { transform: scale(1.15); filter: brightness(1.5); box-shadow: 0 0 30px currentColor; }
+        }
+
+        /* 答題選項樣式 */
+        .option-btn {
+            transition: all 0.2s;
+            border-bottom: 8px solid rgba(0,0,0,0.3);
+        }
+        .option-btn:active {
+            transform: translateY(6px);
+            border-bottom: 2px solid rgba(0,0,0,0.3);
+        }
+
+        /* 輪到誰的指示器動畫 */
+        .turn-bounce {
+            animation: bounceLeftRight 1s infinite alternate;
+        }
+
+        @keyframes bounceLeftRight {
+            0% { transform: translateY(-5px); }
+            100% { transform: translateY(5px); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* O X 回饋動畫 */
+        .feedback-overlay {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .feedback-icon {
+            font-size: 25rem;
+            filter: drop-shadow(0 0 40px rgba(0,0,0,0.8));
+            transform: scale(0.3);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .show-feedback {
+            opacity: 1;
+        }
+        .show-feedback .feedback-icon {
+            transform: scale(1);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col font-sans">
+
+    <!-- 頂部計分板與標題 -->
+    <header class="flex justify-between items-center px-8 py-4 bg-slate-900/90 shadow-2xl border-b border-slate-700 z-20">
+        <!-- 紅隊計分 -->
+        <div id="red-panel" class="flex items-center gap-4 bg-redTeam/20 px-6 py-3 rounded-2xl border-4 border-redTeam transition-all duration-300">
+            <i class="fa-solid fa-fire text-5xl text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"></i>
+            <div class="flex flex-col">
+                <span class="text-xl font-bold text-red-200 tracking-widest">紅隊 (RED)</span>
+                <span id="red-score" class="text-4xl font-black text-white">0</span>
+            </div>
+        </div>
+
+        <!-- 標題與回合指示 -->
+        <div class="flex flex-col items-center">
+            <h1 class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 tracking-widest filter drop-shadow-lg">
+                <i class="fa-solid fa-chess-board mr-2"></i> 相似形五子棋對決
+            </h1>
+            <div id="turn-indicator" class="text-2xl font-bold px-6 py-2 rounded-full shadow-lg turn-bounce bg-redTeam text-white border-2 border-white">
+                <i class="fa-solid fa-hand-pointer mr-2"></i> 輪到：紅隊下棋
+            </div>
+        </div>
+
+        <!-- 藍隊計分 -->
+        <div id="blue-panel" class="flex items-center gap-4 bg-blueTeam/20 px-6 py-3 rounded-2xl border-4 border-transparent transition-all duration-300 opacity-60">
+            <div class="flex flex-col text-right">
+                <span class="text-xl font-bold text-blue-200 tracking-widest">藍隊 (BLUE)</span>
+                <span id="blue-score" class="text-4xl font-black text-white">0</span>
+            </div>
+            <i class="fa-solid fa-water text-5xl text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]"></i>
+        </div>
+    </header>
+
+    <!-- 中間 8x8 (64題) 陣地格 -->
+    <main class="flex-grow flex items-center justify-center p-4">
+        <!-- 使用 aspect-square 保持整體為正方形，並設定 grid-cols-8 -->
+        <div id="grid-container" class="grid grid-cols-8 grid-rows-8 gap-2 w-full max-w-[800px] max-h-[800px] aspect-square">
+            <!-- JS 動態生成格子 -->
+        </div>
+    </main>
+
+    <!-- 答題互動彈窗 (Modal) -->
+    <div id="question-modal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md hidden flex-col items-center justify-center z-40 px-12">
+        <div class="bg-slate-800 border-4 border-slate-600 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] w-full max-w-6xl flex flex-col overflow-hidden popIn">
+            <!-- 彈窗標題 -->
+            <div id="modal-header" class="w-full py-4 text-center text-4xl font-black bg-slate-700 text-white shadow-md">
+                搶占陣地
+            </div>
+            
+            <!-- 題目內容 -->
+            <div class="p-12 flex-grow flex flex-col items-center justify-center min-h-[300px]">
+                <span id="modal-tag" class="text-yellow-400 font-bold text-2xl mb-4 border-2 border-yellow-400 px-4 py-1 rounded-full">標籤</span>
+                <p id="modal-question" class="text-5xl font-bold text-center leading-tight tracking-wide text-white drop-shadow-md">
+                    這裡顯示題目內容
+                </p>
+            </div>
+
+            <!-- 選項按鈕區 -->
+            <div class="grid grid-cols-2 gap-8 p-12 bg-slate-900/50">
+                <button onclick="submitAnswer('A')" id="btn-A" class="option-btn bg-indigo-600 hover:bg-indigo-500 text-white text-4xl font-bold py-10 rounded-2xl flex items-center px-8 gap-6">
+                    <span class="bg-white/20 text-indigo-100 rounded-full w-16 h-16 flex items-center justify-center text-3xl shrink-0">A</span>
+                    <span id="text-A" class="text-left w-full">選項 A</span>
+                </button>
+                <button onclick="submitAnswer('B')" id="btn-B" class="option-btn bg-teal-600 hover:bg-teal-500 text-white text-4xl font-bold py-10 rounded-2xl flex items-center px-8 gap-6">
+                    <span class="bg-white/20 text-teal-100 rounded-full w-16 h-16 flex items-center justify-center text-3xl shrink-0">B</span>
+                    <span id="text-B" class="text-left w-full">選項 B</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 勝利結算彈窗 -->
+    <div id="win-modal" class="fixed inset-0 bg-black/90 backdrop-blur-lg hidden flex-col items-center justify-center z-50">
+        <i id="win-icon" class="fa-solid fa-crown text-9xl mb-8 text-yellow-400 drop-shadow-[0_0_40px_rgba(250,204,21,1)]"></i>
+        <h2 id="win-title" class="text-8xl font-black mb-6 text-white tracking-widest drop-shadow-lg">遊戲結束！</h2>
+        <p id="win-subtitle" class="text-5xl font-bold text-slate-300 mb-12">成功五子連線！</p>
+        <button onclick="location.reload()" class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-4xl font-black px-16 py-6 rounded-full hover:scale-105 transition-transform shadow-[0_0_30px_rgba(245,158,11,0.6)]">
+            再來一局 <i class="fa-solid fa-rotate-right ml-2"></i>
+        </button>
+    </div>
+
+    <!-- O X 回饋動畫層 -->
+    <div id="feedback-layer" class="feedback-overlay">
+        <i id="feedback-icon" class="fa-solid feedback-icon"></i>
+    </div>
+
+    <script>
+        // 擴充題庫 (包含 相似形、AA/SAS/SSS、面積比、三角比、坡度測量)
+        const questionsPool = [
+            // 第一章 1-3 相似多邊形與三角形性質
+            { tag: "相似陷阱", q: "所有的「等腰直角三角形」都必定互相相似嗎？", a: "必定相似", b: "不一定相似", ans: "A" },
+            { tag: "相似陷阱", q: "所有的「長方形」都必定互相相似嗎？", a: "必定相似", b: "不一定，邊長比例可能不同", ans: "B" },
+            { tag: "相似陷阱", q: "所有的「菱形」都必定互相相似嗎？", a: "必定相似", b: "不一定，角度可能不同", ans: "B" },
+            { tag: "相似條件", q: "兩個多邊形相似，除了「對應邊成比例」，還必須？", a: "對應角相等", b: "面積相等", ans: "A" },
+            { tag: "三角形性質", q: "「兩組對應角相等」即可判定相似，這是哪一種性質？", a: "AA 相似", b: "SAS 相似", ans: "A" },
+            { tag: "三角形性質", q: "「三組對應邊長」皆成比例，這是哪一種性質？", a: "SAS 相似", b: "SSS 相似", ans: "B" },
+            { tag: "三角形性質", q: "「一組夾角相等，且夾這角的兩邊成比例」，是哪種相似？", a: "SAS 相似", b: "SSS 相似", ans: "A" },
+            { tag: "縮放魔法", q: "將正五邊形邊長放大 3 倍，其「內角度數」會放大幾倍？", a: "不變 (1倍)", b: "3 倍", ans: "A" },
+            { tag: "縮放魔法", q: "將圖形放大 4 倍後，新的「周長」會是原來的幾倍？", a: "4 倍", b: "16 倍", ans: "A" },
+            { tag: "面積魔術", q: "相似三角形對應邊長比為 2：5，則「面積比」為何？", a: "2：5", b: "4：25 (平方比)", ans: "B" },
+            { tag: "面積魔術", q: "把一個圖形縮小為 1/3，面積會變成原來的多少？", a: "1/3", b: "1/9", ans: "B" },
+            // 第一章 1-4 測量與三角比
+            { tag: "影長測量", q: "身高 1.5m 影長 2m。同時間樹影長 8m，樹高多少？", a: "6 公尺", b: "10 公尺", ans: "A" },
+            { tag: "影長測量", q: "物體高度與影長的關係，是利用哪種性質來計算？", a: "相似三角形成比例", b: "畢氏定理", ans: "A" },
+            { tag: "坡度計算", q: "坡度 10% 代表每水平前進 100m，鉛直會上升多少？", a: "10 公尺", b: "100 公尺", ans: "A" },
+            { tag: "坡度計算", q: "坡度 15% 的山路，水平移動 200m，上升高度是？", a: "15 公尺", b: "30 公尺", ans: "B" },
+            { tag: "特殊三角形", q: "30°-60°-90° 的直角三角形，三邊長比例為？", a: "1：√3：2", b: "1：1：√2", ans: "A" },
+            { tag: "特殊三角形", q: "45°-45°-90° 的直角三角形，三邊長比例為？", a: "1：√3：2", b: "1：1：√2", ans: "B" },
+            { tag: "三角比定義", q: "在直角三角形中，「對邊 ÷ 斜邊」代表哪一個三角比？", a: "sin (正弦)", b: "cos (餘弦)", ans: "A" },
+            { tag: "三角比定義", q: "在直角三角形中，「鄰邊 ÷ 斜邊」代表哪一個三角比？", a: "sin (正弦)", b: "cos (餘弦)", ans: "B" },
+            { tag: "三角比定義", q: "在直角三角形中，「對邊 ÷ 鄰邊」代表哪一個三角比？", a: "tan (正切)", b: "cos (餘弦)", ans: "A" },
+            { tag: "三角比數值", q: "在 30°-60°-90° 三角形中，sin 30° 的值是多少？", a: "1/2", b: "√3/2", ans: "A" },
+            { tag: "三角比數值", q: "在 45°-45°-90° 三角形中，tan 45° 的值是多少？", a: "1", b: "√2", ans: "A" },
+            { tag: "綜合應用", q: "若 △ABC～△DEF，對應高的比為 3：4，則面積比為？", a: "3：4", b: "9：16", ans: "B" },
+            { tag: "觀念釐清", q: "已知兩三角形的對應邊成比例，則對應高的比也會相同嗎？", a: "會相同", b: "不會相同", ans: "A" }
+        ];
+
+        // 遊戲核心變數
+        const GRID_SIZE = 8;
+        const TOTAL_TILES = GRID_SIZE * GRID_SIZE; // 64
+        
+        let currentTurn = 'red'; // 'red' or 'blue'
+        let redScore = 0;
+        let blueScore = 0;
+        let activeQuestionId = null;
+        let isAnimating = false; // 防止連續點擊
+        
+        // gridState 儲存狀態：0(未佔領), 'red'(紅), 'blue'(藍), 'dead'(死局)
+        const gridState = new Array(TOTAL_TILES).fill(0);
+
+        // 初始化 8x8 網格
+        function initGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            for (let i = 0; i < TOTAL_TILES; i++) {
+                const btn = document.createElement('div');
+                btn.id = `grid-btn-${i}`;
+                btn.className = `grid-card card-unclaimed cursor-pointer group`;
+                btn.onclick = () => openQuestion(i);
+                
+                // 內部顯示文字 (用數字代表陣地編號)
+                btn.innerHTML = `
+                    <div class="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                    <span class="z-10">${i + 1}</span>
+                `;
+                container.appendChild(btn);
+            }
+        }
+
+        // 開啟題目 Modal (隨機從題庫挑題)
+        function openQuestion(index) {
+            // 如果已佔領或正在動畫中，則不作動
+            if (gridState[index] !== 0 || isAnimating) return; 
+
+            activeQuestionId = index;
+            // 隨機選題 (允許重複，確保 64 格都有題目)
+            const randomQIndex = Math.floor(Math.random() * questionsPool.length);
+            const qData = questionsPool[randomQIndex];
+            
+            // 設定標題顏色與文字
+            const modalHeader = document.getElementById('modal-header');
+            if(currentTurn === 'red') {
+                modalHeader.className = "w-full py-4 text-center text-4xl font-black bg-red-600 text-white shadow-md";
+                modalHeader.innerHTML = `<i class="fa-solid fa-fire mr-2"></i> 紅隊進攻陣地 ${index + 1}`;
+            } else {
+                modalHeader.className = "w-full py-4 text-center text-4xl font-black bg-blue-600 text-white shadow-md";
+                modalHeader.innerHTML = `<i class="fa-solid fa-water mr-2"></i> 藍隊進攻陣地 ${index + 1}`;
+            }
+
+            document.getElementById('modal-tag').innerText = qData.tag;
+            document.getElementById('modal-question').innerText = qData.q;
+            
+            // 每次把正確答案綁在按鈕的自訂屬性上，避免全域變數干擾
+            document.getElementById('btn-A').setAttribute('data-iscorrect', qData.ans === 'A');
+            document.getElementById('btn-B').setAttribute('data-iscorrect', qData.ans === 'B');
+
+            document.getElementById('text-A').innerText = qData.a;
+            document.getElementById('text-B').innerText = qData.b;
+            
+            document.getElementById('question-modal').style.display = 'flex';
+        }
+
+        // 提交答案
+        function submitAnswer(choice) {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            const btn = document.getElementById(`btn-${choice}`);
+            const isCorrect = btn.getAttribute('data-iscorrect') === 'true';
+            
+            // 隱藏題目框
+            document.getElementById('question-modal').style.display = 'none';
+
+            showFeedbackAnim(isCorrect, () => {
+                const gridBtn = document.getElementById(`grid-btn-${activeQuestionId}`);
+                
+                if (isCorrect) {
+                    // 答對處理
+                    if (currentTurn === 'red') {
+                        redScore += 100;
+                        document.getElementById('red-score').innerText = redScore;
+                        gridState[activeQuestionId] = 'red';
+                        gridBtn.className = "grid-card card-red";
+                    } else {
+                        blueScore += 100;
+                        document.getElementById('blue-score').innerText = blueScore;
+                        gridState[activeQuestionId] = 'blue';
+                        gridBtn.className = "grid-card card-blue";
+                    }
+                    
+                    // 將紅隊的叉叉(fa-xmark)改成實心圓(fa-circle)
+                    gridBtn.innerHTML = `<i class="fa-solid ${currentTurn === 'red' ? 'fa-circle' : 'fa-o'} text-5xl"></i>`;
+                    
+                    // 檢查五子連線
+                    const winLine = checkWin(currentTurn, activeQuestionId);
+                    if (winLine) {
+                        highlightWinLine(winLine);
+                        setTimeout(() => triggerFireworks(currentTurn), 800);
+                        return; // 獲勝直接中斷，不再換回合
+                    }
+
+                } else {
+                    // 答錯處理 (陣地毀滅，無法成為任何人的連線)
+                    gridState[activeQuestionId] = 'dead';
+                    gridBtn.className = "grid-card card-dead";
+                    gridBtn.innerHTML = `<i class="fa-solid fa-skull text-3xl"></i>`;
+                }
+
+                // 檢查是否所有格子都滿了 (平手判定)
+                if (!gridState.includes(0)) {
+                    setTimeout(() => triggerFireworks('draw'), 800);
+                    return;
+                }
+
+                // 換下一隊
+                switchTurn();
+                isAnimating = false;
+            });
+        }
+
+        // 檢查五子連線演算法 (回傳連線的 index 陣列，沒連線回傳 null)
+        function checkWin(player, index) {
+            const r = Math.floor(index / GRID_SIZE);
+            const c = index % GRID_SIZE;
+            
+            // 4個方向：水平、垂直、左上右下、右上左下
+            const directions = [
+                [0, 1],  // 橫向
+                [1, 0],  // 縱向
+                [1, 1],  // \ 對角
+                [1, -1]  // / 對角
+            ];
+
+            for (let [dr, dc] of directions) {
+                let winLine = [index];
+                
+                // 往前查
+                for (let i = 1; i <= 4; i++) {
+                    let nr = r + dr * i;
+                    let nc = c + dc * i;
+                    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) break;
+                    let nIndex = nr * GRID_SIZE + nc;
+                    if (gridState[nIndex] === player) winLine.push(nIndex);
+                    else break;
+                }
+                
+                // 往後查
+                for (let i = 1; i <= 4; i++) {
+                    let nr = r - dr * i;
+                    let nc = c - dc * i;
+                    if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) break;
+                    let nIndex = nr * GRID_SIZE + nc;
+                    if (gridState[nIndex] === player) winLine.push(nIndex);
+                    else break;
+                }
+
+                if (winLine.length >= 5) {
+                    return winLine; // 找到至少 5 顆連線
+                }
+            }
+            return null;
+        }
+
+        // 贏得連線時的高光效果
+        function highlightWinLine(lineIndexes) {
+            lineIndexes.forEach(idx => {
+                const btn = document.getElementById(`grid-btn-${idx}`);
+                btn.classList.add('win-line-highlight');
+            });
+        }
+
+        // 觸發煙火與結算畫面
+        function triggerFireworks(winner) {
+            const winModal = document.getElementById('win-modal');
+            const winTitle = document.getElementById('win-title');
+            const winSubtitle = document.getElementById('win-subtitle');
+            
+            if (winner === 'red') {
+                winTitle.innerHTML = `<span class="text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]">紅隊 獲勝！</span>`;
+                winSubtitle.innerText = `成功達成五子連線！ (總分: ${redScore})`;
+            } else if (winner === 'blue') {
+                winTitle.innerHTML = `<span class="text-blue-500 drop-shadow-[0_0_20px_rgba(59,130,246,0.8)]">藍隊 獲勝！</span>`;
+                winSubtitle.innerText = `成功達成五子連線！ (總分: ${blueScore})`;
+            } else {
+                winTitle.innerHTML = `<span class="text-purple-400">滿局結束！</span>`;
+                winSubtitle.innerText = `紅隊 ${redScore} 分 vs 藍隊 ${blueScore} 分`;
+            }
+
+            winModal.style.display = 'flex';
+            
+            // 寫實煙火特效 (使用 canvas-confetti)
+            var duration = 15 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInRange(min, max) {
+              return Math.random() * (max - min) + min;
+            }
+
+            var interval = setInterval(function() {
+              var timeLeft = animationEnd - Date.now();
+
+              if (timeLeft <= 0) {
+                return clearInterval(interval);
+              }
+
+              var particleCount = 50 * (timeLeft / duration);
+              // 左側放煙火
+              confetti(Object.assign({}, defaults, { particleCount,
+                origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+              }));
+              // 右側放煙火
+              confetti(Object.assign({}, defaults, { particleCount,
+                origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+              }));
+            }, 250);
+        }
+
+        // O X 動畫回饋
+        function showFeedbackAnim(isCorrect, callback) {
+            const layer = document.getElementById('feedback-layer');
+            const icon = document.getElementById('feedback-icon');
+            
+            if (isCorrect) {
+                icon.className = "fa-solid fa-circle-check text-green-500 feedback-icon";
+                // 答對噴一點小碎花
+                confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 }, zIndex: 101 });
+            } else {
+                icon.className = "fa-solid fa-circle-xmark text-slate-400 feedback-icon";
+            }
+
+            layer.classList.add('show-feedback');
+            
+            setTimeout(() => {
+                layer.classList.remove('show-feedback');
+                setTimeout(() => {
+                    callback();
+                }, 300); // 留時間給淡出動畫
+            }, 1000); // 顯示 1 秒
+        }
+
+        // 切換回合 UI
+        function switchTurn() {
+            const redPanel = document.getElementById('red-panel');
+            const bluePanel = document.getElementById('blue-panel');
+            const turnIndicator = document.getElementById('turn-indicator');
+
+            if (currentTurn === 'red') {
+                currentTurn = 'blue';
+                redPanel.classList.remove('border-redTeam');
+                redPanel.classList.add('border-transparent', 'opacity-60');
+                bluePanel.classList.remove('border-transparent', 'opacity-60');
+                bluePanel.classList.add('border-blueTeam');
+                
+                turnIndicator.className = "text-2xl font-bold px-6 py-2 rounded-full shadow-lg turn-bounce bg-blueTeam text-white border-2 border-white";
+                turnIndicator.innerHTML = `<i class="fa-solid fa-hand-pointer mr-2"></i> 輪到：藍隊下棋`;
+            } else {
+                currentTurn = 'red';
+                bluePanel.classList.remove('border-blueTeam');
+                bluePanel.classList.add('border-transparent', 'opacity-60');
+                redPanel.classList.remove('border-transparent', 'opacity-60');
+                redPanel.classList.add('border-redTeam');
+
+                turnIndicator.className = "text-2xl font-bold px-6 py-2 rounded-full shadow-lg turn-bounce bg-redTeam text-white border-2 border-white";
+                turnIndicator.innerHTML = `<i class="fa-solid fa-hand-pointer mr-2"></i> 輪到：紅隊下棋`;
+            }
+        }
+
+        // 啟動遊戲
+        window.onload = () => {
+            initGrid();
+        };
+    </script>
+</body>
+</html>
