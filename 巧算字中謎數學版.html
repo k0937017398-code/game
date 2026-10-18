@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>座標猜字謎 - 猜猜他是誰？</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    
+    .static-dot {
+      transition: fill 0.15s ease;
+    }
+    .static-dot:hover {
+      fill: #1d4ed8;
+    }
+
+    @keyframes tilePop {
+      0% { transform: scale(0.5); opacity: 0; }
+      70% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .tile-unlock-anim {
+      animation: tilePop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-100 flex flex-col items-center justify-between p-3 sm:p-5 text-slate-800 font-sans">
+
+  <!-- 頂部標題區 -->
+  <header class="w-full max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/90 backdrop-blur-md p-3.5 px-6 rounded-3xl shadow-md border-2 border-amber-200 mb-3">
+    <div class="flex items-center gap-3">
+      <div class="text-3xl sm:text-4xl">🧘‍♂️</div>
+      <div>
+        <h1 class="text-2xl sm:text-3xl font-black text-amber-950 tracking-wider">猜猜他是誰？</h1>
+        <p class="text-xs sm:text-sm font-bold text-amber-700">對照平面直角座標系尋找字棋，解開謎底組合！</p>
+      </div>
+    </div>
+    
+    <button onclick="resetGame()" class="px-4 py-2 bg-amber-100 hover:bg-amber-200 active:scale-95 text-amber-950 font-black rounded-2xl border-2 border-amber-300 transition text-xs sm:text-sm shadow-sm">
+      🔄 重新挑戰
+    </button>
+  </header>
+
+  <!-- 主遊戲區域 (僅此單一區塊) -->
+  <main class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch justify-center gap-5 my-auto">
+
+    <!-- 左側：平面直角座標系 -->
+    <section class="w-full lg:w-[480px] bg-white rounded-3xl p-4 shadow-xl border-2 border-amber-200 flex flex-col items-center justify-between min-h-[460px]">
+      <div class="text-xs sm:text-sm font-black text-slate-500 mb-1 w-full text-left">平面直角座標系</div>
+      
+      <div class="relative w-full aspect-square max-w-[420px]">
+        <svg id="grid-svg" viewBox="-6 -6 12 12" class="w-full h-full cursor-pointer">
+          <!-- 背景網格 -->
+          <g id="grid-lines" stroke="#cbd5e1" stroke-width="0.08"></g>
+          
+          <!-- X/Y 軸線 (帶箭頭) -->
+          <line x1="-5.5" y1="0" x2="5.5" y2="0" stroke="#334155" stroke-width="0.16" marker-end="url(#arrow)" />
+          <line x1="0" y1="5.5" x2="0" y2="-5.5" stroke="#334155" stroke-width="0.16" marker-end="url(#arrow)" />
+          
+          <!-- 箭頭定義 -->
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+            </marker>
+          </defs>
+
+          <!-- 原點與刻度標籤 -->
+          <text x="-0.45" y="0.55" font-size="0.6" font-weight="black" fill="#64748b">O</text>
+          <text x="1" y="0.65" font-size="0.55" font-weight="black" fill="#64748b">1</text>
+          <text x="-0.55" y="-1" font-size="0.55" font-weight="black" fill="#64748b">1</text>
+          <text x="5.2" y="0.65" font-size="0.65" font-weight="black" fill="#1e293b">x</text>
+          <text x="-0.65" y="-5.1" font-size="0.65" font-weight="black" fill="#1e293b">y</text>
+
+          <!-- 座標點與文字圖層 -->
+          <g id="points-layer"></g>
+        </svg>
+      </div>
+
+      <p class="text-xs font-bold text-amber-800/80 mt-2 text-center">💡 點擊圖上字棋，可快速填入右側目前選中的輸入框</p>
+    </section>
+
+    <!-- 右側：4 列算式 + 拖曳重組區 -->
+    <section class="w-full lg:w-[620px] bg-white/95 backdrop-blur-md rounded-3xl p-4 sm:p-5 shadow-xl border-2 border-amber-200 flex flex-col justify-between gap-3 min-h-[460px]">
+      
+      <div class="text-xs sm:text-sm font-black text-amber-950 border-b-2 border-amber-100 pb-2 flex justify-between items-center">
+        <span>🧩 第一階段：填入對應字棋並計算解答</span>
+      </div>
+
+      <!-- 四組座標算式卡片 -->
+      <div id="equations-container" class="space-y-2.5">
+        <!-- JS 動態繪製 -->
+      </div>
+
+      <!-- 第二階段：拖曳重組謎底區 -->
+      <div class="mt-2 bg-gradient-to-r from-amber-100 via-orange-100 to-amber-100 p-3.5 rounded-2xl border-2 border-amber-300 flex flex-col gap-3 shadow-inner">
+        <div class="flex items-center justify-between border-b border-amber-200/80 pb-2">
+          <div>
+            <div class="font-black text-amber-950 text-sm sm:text-base">✨ 第二階段：拖曳字卡重組謎底</div>
+            <p class="text-xs font-bold text-amber-800">將下方獲得的字卡拖曳（或點擊）放入正確順序的欄位中：</p>
+          </div>
+          <span id="unlocked-count-badge" class="text-xs bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-bold">已解鎖 0/4 字</span>
+        </div>
+
+        <!-- 解鎖字卡池 -->
+        <div class="flex items-center justify-center gap-3 min-h-[50px] p-2 bg-white/60 rounded-xl border border-dashed border-amber-300" id="tiles-pool">
+          <span class="text-xs text-amber-600 font-bold" id="pool-empty-hint">解開上方算式後，字卡將自動在此解鎖...</span>
+        </div>
+
+        <!-- 4 個目標放置欄位 -->
+        <div class="flex items-center justify-center gap-3 pt-1">
+          <span class="text-xs font-black text-amber-900 hidden sm:inline">組合順序：</span>
+          <div class="flex items-center gap-2" id="target-slots-container">
+            <!-- 動態繪製與互動 -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 全螢幕慶祝動畫 Canvas -->
+  <canvas id="celebration-canvas" onclick="stopCelebration()" class="pointer-events-auto fixed inset-0 z-40 hidden cursor-pointer"></canvas>
+
+  <!-- 成功通關對話框 -->
+  <div id="win-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-center transform transition-all scale-95 border-4 border-amber-300">
+      <div class="text-6xl mb-2 animate-bounce">🎉</div>
+      <h2 class="text-3xl font-black text-amber-950 mb-1">恭喜完美通關！</h2>
+      <p class="text-sm font-bold text-amber-700 mb-4">座標精準，智慧大開！</p>
+
+      <div class="bg-amber-50 rounded-2xl p-4 mb-5 border-2 border-amber-200">
+        <div class="text-4xl font-black text-amber-900 tracking-widest mb-1">景 興 學 子</div>
+        <p class="text-xs text-amber-700 font-bold mt-1">智慧開朗 · 茁壯飛揚</p>
+      </div>
+
+      <button onclick="closeModal()" class="w-full py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-black rounded-2xl shadow-lg transition active:scale-95 text-base">
+        保留答案查看
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // 25 個獨一無二的座標點棋子 (正藍色 #2563eb)
+    const CHAR_MAP = {
+      "(-4, 5)": "覺", "(-3, 4)": "寸", "(-2, 3)": "慈", "(-4, 3)": "悲",
+      "(-3, 2)": "減", "(-5, 1)": "清", "(1, 1)": "爾", "(3, 4)": "明",
+      "(5, 5)": "智", "(3, 2)": "與", "(4, 2)": "孫", "(4, 1)": "子",
+      "(-3, -1)": "同", "(-5, -2)": "可", "(-2, -3)": "乘", "(-3, -4)": "人",
+      "(-4, -5)": "与", "(-2, -5)": "係", "(1, -2)": "弓", "(3, -1)": "文",
+      "(5, -2)": "加", "(3, -3)": "見", "(4, -4)": "京", "(1, -5)": "月", "(4, -5)": "慧"
+    };
+
+    // 4 列題目與對應解答
+    const PUZZLE_DATA = [
+      { coords: ["(4, 2)", "(-3, 2)", "(-2, -5)", "(5, -2)", "(-3, -4)"], target: "子" },
+      { coords: ["(-3, -1)", "(5, -2)", "(3, 2)", "(-3, 2)", "(-4, -5)"], target: "興" },
+      { coords: ["(3, 4)", "(-3, 2)", "(1, -5)", "(5, -2)", "(4, -4)"], target: "景" },
+      { coords: ["(4, 1)", "(5, -2)", "(-4, 5)", "(-3, 2)", "(3, -3)"], target: "學" }
+    ];
+
+    const TARGET_WORD = ["景", "興", "學", "子"];
+
+    let unlockedTiles = [];
+    let slotContents = [null, null, null, null];
+    let selectedTileChar = null;
+    let activeInputRef = null;
+
+    function playAudio(type) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+
+        if (type === 'pop') {
+          osc.type = 'sine'; osc.frequency.setValueAtTime(400, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+          osc.start(); osc.stop(ctx.currentTime + 0.08);
+        } else if (type === 'unlock') {
+          osc.type = 'triangle'; osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.25, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+          osc.start(); osc.stop(ctx.currentTime + 0.18);
+        } else if (type === 'success') {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+            const o = ctx.createOscillator(); const g = ctx.createGain();
+            o.type = 'triangle'; o.frequency.value = freq;
+            g.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.1);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.3);
+            o.connect(g); g.connect(ctx.destination);
+            o.start(ctx.currentTime + idx * 0.1); o.stop(ctx.currentTime + idx * 0.1 + 0.3);
+          });
+        }
+      } catch(e){}
+    }
+
+    // 繪製 SVG 座標圖
+    function initSVGGrid() {
+      const gridLines = document.getElementById('grid-lines');
+      const pointsLayer = document.getElementById('points-layer');
+      if (!gridLines || !pointsLayer) return;
+      
+      gridLines.innerHTML = '';
+      pointsLayer.innerHTML = '';
+      
+      for (let i = -5; i <= 5; i++) {
+        if (i !== 0) {
+          const vLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          vLine.setAttribute("x1", i); vLine.setAttribute("y1", -5.5);
+          vLine.setAttribute("x2", i); vLine.setAttribute("y2", 5.5);
+          gridLines.appendChild(vLine);
+
+          const hLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          hLine.setAttribute("x1", -5.5); hLine.setAttribute("y1", i);
+          hLine.setAttribute("x2", 5.5); hLine.setAttribute("y2", i);
+          gridLines.appendChild(hLine);
+        }
+      }
+
+      Object.entries(CHAR_MAP).forEach(([coordStr, char]) => {
+        const [x, y] = coordStr.replace(/[()]/g, '').split(',').map(Number);
+        const svgY = -y;
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "cursor-pointer");
+
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", x);
+        circle.setAttribute("cy", svgY);
+        circle.setAttribute("r", "0.28");
+        circle.setAttribute("fill", "#2563eb");
+        circle.setAttribute("class", "static-dot");
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("font-size", "0.65");
+        text.setAttribute("font-weight", "900");
+        text.setAttribute("fill", "#0f172a");
+        text.textContent = char;
+
+        // (3, 2) 「與」字靠左排，避免遮擋 (4, 2) 「孫」字的藍點
+        if (coordStr === "(3, 2)") {
+          text.setAttribute("x", x - 0.35);
+          text.setAttribute("y", svgY + 0.22);
+          text.setAttribute("text-anchor", "end");
+        } else {
+          text.setAttribute("x", x + 0.32);
+          text.setAttribute("y", svgY + 0.22);
+          text.setAttribute("text-anchor", "start");
+        }
+
+        g.appendChild(circle);
+        g.appendChild(text);
+
+        g.addEventListener('click', () => {
+          if (activeInputRef && !activeInputRef.readOnly) {
+            activeInputRef.value = char;
+            activeInputRef.dispatchEvent(new Event('input'));
+            playAudio('pop');
+          }
+        });
+
+        pointsLayer.appendChild(g);
+      });
+    }
+
+    // 繪製算式列（長度一致的橘色膠囊）
+    function renderEquations() {
+      const container = document.getElementById('equations-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      PUZZLE_DATA.forEach((row, rIdx) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = "bg-amber-50/80 rounded-2xl p-2 sm:p-2.5 border border-amber-200 flex flex-nowrap items-center justify-between gap-1 sm:gap-2 overflow-x-auto min-w-0 shadow-sm";
+
+        const inputsDiv = document.createElement('div');
+        inputsDiv.className = "flex flex-nowrap items-center gap-1 sm:gap-1.5 shrink-0";
+
+        row.coords.forEach((coord, cIdx) => {
+          const pill = document.createElement('div');
+          pill.className = "w-[82px] sm:w-[90px] h-8 px-1.5 bg-amber-500 text-white rounded-xl text-xs font-black flex items-center justify-between shrink-0 border border-amber-600 shadow-sm";
+          
+          pill.innerHTML = `
+            <span class="text-[10px] sm:text-xs font-mono font-bold tracking-tighter text-center flex-1">${coord}</span>
+            <input type="text" maxlength="1" class="slot-input w-6 h-6 sm:w-7 sm:h-7 text-center font-black text-xs sm:text-sm text-slate-900 bg-white rounded-lg border border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 shrink-0" data-row="${rIdx}" data-col="${cIdx}">
+          `;
+
+          inputsDiv.appendChild(pill);
+        });
+
+        const resultDiv = document.createElement('div');
+        resultDiv.className = "flex items-center gap-1 sm:gap-1.5 shrink-0 font-black text-amber-950 text-sm pl-1";
+        resultDiv.innerHTML = `
+          <span>＝</span>
+          <input type="text" maxlength="1" class="row-target-input w-8 h-8 sm:w-9 sm:h-9 text-center font-black text-base sm:text-lg bg-white border-2 border-amber-400 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500 text-amber-950" data-row="${rIdx}" placeholder="?">
+        `;
+
+        rowDiv.appendChild(inputsDiv);
+        rowDiv.appendChild(resultDiv);
+        container.appendChild(rowDiv);
+      });
+
+      bindInputEvents();
+    }
+
+    function bindInputEvents() {
+      document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('focus', () => activeInputRef = input);
+      });
+
+      document.querySelectorAll('.row-target-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+          const rIdx = parseInt(e.target.dataset.row);
+          const val = e.target.value.trim();
+          
+          if (val === PUZZLE_DATA[rIdx].target) {
+            e.target.className = "row-target-input w-8 h-8 sm:w-9 sm:h-9 text-center font-black text-base sm:text-lg bg-emerald-500 text-white border-2 border-emerald-600 rounded-xl shadow-md pointer-events-none";
+            e.target.readOnly = true;
+
+            unlockTile(val);
+          }
+        });
+      });
+    }
+
+    function unlockTile(char) {
+      if (!unlockedTiles.includes(char)) {
+        unlockedTiles.push(char);
+        playAudio('unlock');
+        renderTilesPool();
+      }
+    }
+
+    function renderTilesPool() {
+      const pool = document.getElementById('tiles-pool');
+      const hint = document.getElementById('pool-empty-hint');
+      const badge = document.getElementById('unlocked-count-badge');
+      if (!pool || !badge) return;
+      
+      badge.innerText = `已解鎖 ${unlockedTiles.length}/4 字`;
+      
+      if (unlockedTiles.length > 0 && hint) {
+        hint.style.display = 'none';
+      }
+
+      pool.innerHTML = '';
+      unlockedTiles.forEach(char => {
+        if (!slotContents.includes(char)) {
+          const card = document.createElement('div');
+          card.draggable = true;
+          card.innerText = char;
+          card.className = `w-10 h-10 sm:w-11 sm:h-11 bg-amber-500 text-white border-2 border-amber-600 rounded-xl flex items-center justify-center font-black text-xl shadow-md cursor-grab active:cursor-grabbing select-none tile-unlock-anim ${selectedTileChar === char ? 'ring-4 ring-amber-300 scale-110' : ''}`;
+
+          card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', char);
+            selectedTileChar = char;
+          });
+
+          card.addEventListener('click', () => {
+            selectedTileChar = selectedTileChar === char ? null : char;
+            renderTilesPool();
+          });
+
+          pool.appendChild(card);
+        }
+      });
+
+      renderTargetSlots();
+    }
+
+    function renderTargetSlots() {
+      const container = document.getElementById('target-slots-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      slotContents.forEach((char, sIdx) => {
+        const slot = document.createElement('div');
+        slot.dataset.slot = sIdx;
+        
+        if (char) {
+          slot.className = "w-11 h-11 sm:w-12 sm:h-12 border-2 border-amber-500 bg-amber-500 text-white rounded-xl flex items-center justify-center font-black text-xl shadow-md cursor-pointer transition-all";
+          slot.innerText = char;
+
+          slot.addEventListener('click', () => {
+            slotContents[sIdx] = null;
+            playAudio('pop');
+            renderTilesPool();
+          });
+        } else {
+          slot.className = "w-11 h-11 sm:w-12 sm:h-12 border-2 border-dashed border-amber-400 bg-white rounded-xl flex items-center justify-center font-black text-xl text-amber-900 shadow-sm transition-all cursor-pointer hover:border-amber-600 hover:bg-amber-50";
+          slot.innerText = "?";
+
+          slot.addEventListener('dragover', (e) => e.preventDefault());
+          slot.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const droppedChar = e.dataTransfer.getData('text/plain') || selectedTileChar;
+            if (droppedChar) {
+              placeTileInSlot(sIdx, droppedChar);
+            }
+          });
+
+          slot.addEventListener('click', () => {
+            if (selectedTileChar) {
+              placeTileInSlot(sIdx, selectedTileChar);
+            }
+          });
+        }
+
+        container.appendChild(slot);
+      });
+
+      checkReorderWin();
+    }
+
+    function placeTileInSlot(sIdx, char) {
+      const existingIdx = slotContents.indexOf(char);
+      if (existingIdx !== -1) {
+        slotContents[existingIdx] = null;
+      }
+
+      slotContents[sIdx] = char;
+      selectedTileChar = null;
+      playAudio('pop');
+      renderTilesPool();
+    }
+
+    function checkReorderWin() {
+      const isComplete = slotContents.every((c, i) => c === TARGET_WORD[i]);
+      if (isComplete) {
+        playAudio('success');
+        setTimeout(triggerCelebration, 400);
+      }
+    }
+
+    function startApp() {
+      unlockedTiles = [];
+      slotContents = [null, null, null, null];
+      selectedTileChar = null;
+      initSVGGrid();
+      renderEquations();
+      renderTilesPool();
+    }
+
+    function resetGame() {
+      stopCelebration();
+      closeModal();
+      startApp();
+    }
+
+    // Canvas 煙火動畫
+    let canvas, ctx, particles = [], animId;
+
+    function triggerCelebration() {
+      canvas = document.getElementById('celebration-canvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+      canvas.classList.remove('hidden');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      particles = [];
+      for (let i = 0; i < 120; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 14,
+          vy: (Math.random() - 0.5) * 14,
+          color: `hsl(${Math.random() * 50 + 35}, 100%, 60%)`,
+          radius: Math.random() * 5 + 2,
+          alpha: 1
+        });
+      }
+
+      animateCanvas();
+
+      setTimeout(() => {
+        const modal = document.getElementById('win-modal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }, 800);
+    }
+
+    function animateCanvas() {
+      if (!ctx || !canvas) return;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach((p, idx) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.alpha -= 0.008;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(p.alpha, 0);
+        ctx.fill();
+
+        if (p.alpha <= 0) {
+          particles[idx] = {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height * 0.6,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            color: `hsl(${Math.random() * 50 + 35}, 100%, 60%)`,
+            radius: Math.random() * 4 + 2,
+            alpha: 1
+          };
+        }
+      });
+
+      animId = requestAnimationFrame(animateCanvas);
+    }
+
+    function stopCelebration() {
+      if (canvas && !canvas.classList.contains('hidden')) {
+        canvas.classList.add('hidden');
+        cancelAnimationFrame(animId);
+      }
+    }
+
+    function closeModal() {
+      stopCelebration();
+      const modal = document.getElementById('win-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startApp);
+    } else {
+      startApp();
+    }
+  </script>
+</body>
+</html>
