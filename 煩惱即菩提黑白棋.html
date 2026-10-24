@@ -121,7 +121,7 @@
                 <h2 class="text-xl font-black text-stone-800 break-all" id="p1-display-name">玩家1</h2>
             </div>
             <div class="flex items-center gap-3">
-                <div class="text-4xl drop-shadow-md" id="p1-display-avatar">🪷</div>
+                <div class="text-4xl drop-shadow-md" id="p1-display-avatar">⚽</div>
                 <div class="w-14 h-14 rounded-full bg-[#1c1c1c] text-white flex items-center justify-center text-base font-black shadow-md border-2 border-stone-800">煩惱</div>
             </div>
             <div class="text-4xl font-black text-stone-800 w-16" id="score-black">2</div>
@@ -178,10 +178,10 @@
         <aside class="w-full lg:w-48 bg-white/80 rounded-2xl p-3 shadow-md border border-[#d3c9b1] flex flex-row lg:flex-col items-center justify-around gap-2 text-center">
             <div class="flex flex-col items-center">
                 <span class="text-sm text-stone-500 font-bold block">(白 / 後手)</span>
-                <h2 class="text-xl font-black text-stone-800 break-all" id="p2-display-name">電腦</h2>
+                <h2 class="text-xl font-black text-stone-800 break-all" id="p2-display-name">程式</h2>
             </div>
             <div class="flex items-center gap-3 lg:flex-row-reverse">
-                <div class="text-4xl drop-shadow-md" id="p2-display-avatar">☸️</div>
+                <div class="text-4xl drop-shadow-md" id="p2-display-avatar">🪷</div>
                 <div class="w-14 h-14 rounded-full bg-[#fdfdfd] text-[#1c1c1c] flex items-center justify-center text-base font-black shadow-md border-2 border-[#ccc]">菩提</div>
             </div>
             <div class="text-4xl font-black text-stone-800 w-16" id="score-white">2</div>
@@ -196,7 +196,7 @@
                 
                 <div class="flex justify-center gap-4">
                     <label class="cursor-pointer flex items-center gap-2 font-bold text-stone-800 bg-stone-200 px-4 py-2 rounded-lg hover:bg-stone-300">
-                        <input type="radio" name="mode" value="1P" checked onchange="toggleMode()" class="w-5 h-5 accent-[#4a3623]"> 單機對弈
+                        <input type="radio" name="mode" value="1P" checked onchange="toggleMode()" class="w-5 h-5 accent-[#4a3623]"> 單人修行 (對弈程式)
                     </label>
                     <label class="cursor-pointer flex items-center gap-2 font-bold text-stone-800 bg-stone-200 px-4 py-2 rounded-lg hover:bg-stone-300">
                         <input type="radio" name="mode" value="2P" onchange="toggleMode()" class="w-5 h-5 accent-[#4a3623]"> 雙人對弈
@@ -207,9 +207,9 @@
                     <h3 class="font-black text-stone-800 mb-2">先手 (黑子 / 煩惱)</h3>
                     <div class="flex gap-2">
                         <select id="p1-avatar" class="text-3xl bg-white border border-stone-300 rounded p-1 w-16 outline-none">
-                            <option value="🪷">🪷</option><option value="☸️">☸️</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
-                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
                             <option value="⚽">⚽</option><option value="🏀">🏀</option><option value="⚾">⚾</option><option value="🎾">🎾</option>
+                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
+                            <option value="🪷">🪷</option><option value="☸️">☸️</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
                         </select>
                         <input type="text" id="p1-name" value="玩家1" placeholder="輸入姓名" class="flex-1 px-3 py-2 border border-stone-300 rounded font-bold text-stone-800 outline-none focus:border-[#4a3623]">
                     </div>
@@ -219,11 +219,12 @@
                     <h3 class="font-black text-stone-800 mb-2">後手 (白子 / 菩提)</h3>
                     <div class="flex gap-2">
                         <select id="p2-avatar" class="text-3xl bg-white border border-stone-300 rounded p-1 w-16 outline-none">
-                            <option value="☸️">☸️</option><option value="🪷">🪷</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
-                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
+                            <option value="🪷" selected>🪷</option>
                             <option value="⚽">⚽</option><option value="🏀">🏀</option><option value="⚾">⚾</option><option value="🎾">🎾</option>
+                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
+                            <option value="☸️">☸️</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
                         </select>
-                        <input type="text" id="p2-name" value="電腦" disabled placeholder="輸入姓名" class="flex-1 px-3 py-2 border border-stone-300 rounded font-bold text-stone-800 outline-none focus:border-[#4a3623] disabled:opacity-50">
+                        <input type="text" id="p2-name" value="程式" disabled placeholder="輸入姓名" class="flex-1 px-3 py-2 border border-stone-300 rounded font-bold text-stone-800 outline-none focus:border-[#4a3623] disabled:opacity-50">
                     </div>
                 </div>
 
@@ -238,12 +239,13 @@
             <div class="bg-[#4a3623] py-4 text-center text-[#f4f0e6] font-bold tracking-wider text-xl">對弈規則</div>
             <div class="p-6 space-y-4 text-stone-700 text-base md:text-lg leading-relaxed font-medium">
                 <ol class="list-decimal pl-5 space-y-2 font-bold">
-                    <li><span class="text-stone-900 bg-stone-200 px-1 rounded">黑子(煩惱)</span> 先手，<span class="text-stone-700 bg-green-100 px-1 rounded">白子(菩提)</span> 後手。</li>
+                    <li>使用黑白雙面棋子共64顆，<span class="text-stone-900 bg-stone-200 px-1 rounded">黑子(煩惱)</span> 先手，<span class="text-stone-700 bg-green-100 px-1 rounded">白子(菩提)</span> 後手。</li>
                     <li>請落子於能夾殺（轉化）敵方棋子之處。</li>
                     <li class="text-red-700">【覺察修行】：落子後，請憑記憶點擊因本次落子而需轉化的棋子。</li>
                     <li>若遺漏或點錯，系統會給予發光提示作為輔助。</li>
                     <li>最新落子的位置會標示<span class="text-red-500 font-black">紅點</span>。</li>
-                    <li class="text-stone-500 font-normal text-sm mt-2">（單機對弈下，電腦將自動翻轉棋子）</li>
+                    <li>棋子下完（或雙方皆無法下子）才會結算成績。</li>
+                    <li class="text-stone-500 font-normal text-sm mt-2">（單人修行下，程式將自動翻轉棋子）</li>
                 </ol>
                 <button onclick="startGame()" class="bg-[#4a3623] hover:bg-[#2c1a0e] text-white px-10 py-3 mt-4 rounded-full font-bold text-lg shadow-lg w-full active:scale-95 transition-transform">開始修行</button>
             </div>
@@ -307,11 +309,12 @@
         let pendingFlips = [];
         let showHints = false; // 鷹架：是否顯示發光提示
         let lastMove = null;
+        let currentTurnInitialFlips = 0;
 
         // 客製化
         let gameMode = '1P';
-        let p1Name = '玩家1', p1Avatar = '🪷';
-        let p2Name = '電腦', p2Avatar = '☸️';
+        let p1Name = '玩家1', p1Avatar = '⚽';
+        let p2Name = '程式', p2Avatar = '🪷';
 
         const boardEl = document.getElementById('board');
         
@@ -325,7 +328,7 @@
             
             const p2NameInput = document.getElementById('p2-name');
             if (gameMode === '1P') {
-                p2NameInput.value = '電腦';
+                p2NameInput.value = '程式';
                 p2NameInput.disabled = true;
             } else {
                 p2NameInput.value = '玩家2';
@@ -336,7 +339,7 @@
         function goToRules() {
             p1Name = document.getElementById('p1-name').value || '玩家1';
             p1Avatar = document.getElementById('p1-avatar').value;
-            p2Name = document.getElementById('p2-name').value || (gameMode === '1P' ? '電腦' : '玩家2');
+            p2Name = document.getElementById('p2-name').value || (gameMode === '1P' ? '程式' : '玩家2');
             p2Avatar = document.getElementById('p2-avatar').value;
 
             document.getElementById('p1-display-name').innerText = p1Name;
@@ -392,6 +395,7 @@
             logicalBoard[4][3] = BLACK; visualBoard[4][3] = BLACK;
             logicalBoard[4][4] = WHITE; visualBoard[4][4] = WHITE;
             lastMove = null;
+            currentTurnInitialFlips = 0;
         }
 
         function startGame() {
@@ -460,11 +464,6 @@
             renderBoard();
             updateScore();
 
-            // 檢查法語
-            if (best.flips.length >= 5) {
-                await showQuoteModal(best.flips.length);
-            }
-
             // 自動翻面動畫
             for (let i = 0; i < best.flips.length; i++) {
                 await sleep(400);
@@ -473,6 +472,11 @@
                 visualBoard[f.y][f.x] = WHITE;
                 renderBoard();
                 updateScore();
+            }
+
+            // 翻面完成後，若數量達到 5 顆以上，則顯示法語甘露
+            if (best.flips.length >= 5) {
+                await showQuoteModal(best.flips.length);
             }
 
             await sleep(500);
@@ -493,15 +497,11 @@
                     visualBoard[y][x] = currentTurn; 
                     lastMove = { x, y };
                     pendingFlips = [...move.flips];
+                    currentTurnInitialFlips = pendingFlips.length;
                     showHints = false; 
                     
                     renderBoard();
                     updateScore();
-
-                    // 檢查法語
-                    if (pendingFlips.length >= 5) {
-                        await showQuoteModal(pendingFlips.length);
-                    }
                     
                     gameState = 'MANUAL_FLIP';
                     updateManualFlipStatus();
@@ -520,6 +520,12 @@
                     updateScore();
 
                     if (pendingFlips.length === 0) {
+                        // 翻面完成後，檢查是否顯示法語
+                        if (currentTurnInitialFlips >= 5) {
+                            await showQuoteModal(currentTurnInitialFlips);
+                        }
+                        currentTurnInitialFlips = 0; // 重置
+                        
                         currentTurn = currentTurn === BLACK ? WHITE : BLACK;
                         startTurn();
                     } else {
@@ -599,7 +605,6 @@
                     // 可落子提示 (僅小點，不發光)
                     if (gameState === 'PLAYER_TURN' && val === EMPTY && validMoves.some(m => m.x === x && m.y === y)) {
                         validDot.classList.remove('hidden');
-                        // Desktop hover effect can be added via CSS, but JS explicit control is safer for mobile
                     }
 
                     // 犯錯鷹架提示
