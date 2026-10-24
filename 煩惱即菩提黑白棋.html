@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>轉煩惱為菩提 - 覺察黑白棋</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #f4f1ea; 
+            color: #3e2723;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 棋盤與網格 */
+        .board-container {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.5);
+            background-color: #3e2723; /* 深木色外框 */
+            padding: 8px;
+            border-radius: 8px;
+        }
+
+        /* 3D 棋子設計 */
+        .coin-wrapper {
+            width: 84%;
+            height: 84%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        .coin-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 -3px 6px rgba(0,0,0,0.2);
+        }
+
+        .coin-black {
+            background-color: #1c1c1c;
+            color: #f5f5f5;
+            transform: rotateY(0deg);
+            border: 2px solid #000;
+        }
+
+        .coin-white {
+            background-color: #fdfdfd;
+            color: #1c1c1c;
+            transform: rotateY(180deg);
+            border: 2px solid #ccc;
+        }
+
+        .coin-wrapper.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* 提示小點 */
+        .valid-move-dot {
+            width: 24%;
+            height: 24%;
+            background-color: rgba(0, 0, 0, 0.25);
+            border-radius: 50%;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        /* 最新落子紅點 */
+        .last-move-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #ef4444; /* Tailwind red-500 */
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            position: absolute;
+            z-index: 50;
+        }
+
+        /* 捲軸特效 (法語 Modal) */
+        .scroll-bg {
+            background: linear-gradient(to bottom, #fdfbf7 0%, #f4eadd 100%);
+            border: 4px solid #c7a97b;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        /* 隱藏原生 select 箭頭 */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start py-6 px-2 sm:px-4">
+
+    <!-- 頂部標題與狀態 -->
+    <header class="w-full max-w-4xl flex flex-col items-center mb-4 z-10">
+        <h1 class="text-3xl md:text-4xl font-black text-[#4a3623] tracking-widest drop-shadow-sm mb-3">轉煩惱為菩提</h1>
+        <div id="status-bar" class="inline-block bg-white/90 px-6 py-2 rounded-full font-bold text-base md:text-xl border-2 border-[#c1b8a6] shadow-sm transition-all duration-300 text-center">
+            請設定對弈選項
+        </div>
+    </header>
+
+    <!-- 遊戲主體 -->
+    <main class="w-full max-w-5xl flex flex-col lg:flex-row items-center justify-center gap-4 lg:gap-8 opacity-0 hidden transition-opacity duration-700" id="game-main">
+        
+        <!-- 左側面板 (黑 / 先手) -->
+        <aside class="w-full lg:w-48 bg-white/80 rounded-2xl p-3 shadow-md border border-[#d3c9b1] flex flex-row lg:flex-col items-center justify-around gap-2 text-center">
+            <div class="flex flex-col items-center">
+                <span class="text-sm text-stone-500 font-bold block">(黑 / 先手)</span>
+                <h2 class="text-xl font-black text-stone-800 break-all" id="p1-display-name">玩家1</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-4xl drop-shadow-md" id="p1-display-avatar">🪷</div>
+                <div class="w-14 h-14 rounded-full bg-[#1c1c1c] text-white flex items-center justify-center text-base font-black shadow-md border-2 border-stone-800">煩惱</div>
+            </div>
+            <div class="text-4xl font-black text-stone-800 w-16" id="score-black">2</div>
+        </aside>
+
+        <!-- 中央棋盤區 -->
+        <div class="flex flex-col items-center relative">
+            <div class="board-container flex flex-col">
+                <!-- 頂部座標 A-H -->
+                <div class="flex w-full h-6 text-stone-300 font-bold text-sm md:text-base select-none">
+                    <div class="w-6 md:w-8"></div>
+                    <div class="flex-1 grid grid-cols-8 place-items-center">
+                        <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+                    </div>
+                    <div class="w-6 md:w-8"></div>
+                </div>
+
+                <div class="flex">
+                    <!-- 左側座標 1-8 -->
+                    <div class="w-6 md:w-8 grid grid-rows-8 place-items-center text-stone-300 font-bold text-sm md:text-base select-none">
+                        <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div>
+                    </div>
+                    
+                    <!-- 棋盤格 (8x8 Grid) -->
+                    <div id="board" class="w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] md:w-[480px] md:h-[480px] grid grid-cols-8 grid-rows-8 gap-[2px] bg-[#3e2723] border border-[#3e2723]">
+                        <!-- JS 動態生成 Cell -->
+                    </div>
+                    
+                    <!-- 右側座標 1-8 -->
+                    <div class="w-6 md:w-8 grid grid-rows-8 place-items-center text-stone-300 font-bold text-sm md:text-base select-none">
+                        <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div>
+                    </div>
+                </div>
+
+                <!-- 底部座標 A-H -->
+                <div class="flex w-full h-6 text-stone-300 font-bold text-sm md:text-base select-none">
+                    <div class="w-6 md:w-8"></div>
+                    <div class="flex-1 grid grid-cols-8 place-items-center">
+                        <div>A</div><div>B</div><div>C</div><div>D</div><div>E</div><div>F</div><div>G</div><div>H</div>
+                    </div>
+                    <div class="w-6 md:w-8"></div>
+                </div>
+            </div>
+
+            <!-- 再來一局按鈕 -->
+            <div id="action-area" class="mt-6 hidden w-full flex justify-center">
+                <button onclick="resetToSetup()" class="bg-[#c85a17] hover:bg-[#a04610] text-white px-10 py-3 rounded-full font-black text-xl shadow-lg transition-transform active:scale-95 border-2 border-white">
+                    再來一局
+                </button>
+            </div>
+        </div>
+
+        <!-- 右側面板 (白 / 後手) -->
+        <aside class="w-full lg:w-48 bg-white/80 rounded-2xl p-3 shadow-md border border-[#d3c9b1] flex flex-row lg:flex-col items-center justify-around gap-2 text-center">
+            <div class="flex flex-col items-center">
+                <span class="text-sm text-stone-500 font-bold block">(白 / 後手)</span>
+                <h2 class="text-xl font-black text-stone-800 break-all" id="p2-display-name">電腦</h2>
+            </div>
+            <div class="flex items-center gap-3 lg:flex-row-reverse">
+                <div class="text-4xl drop-shadow-md" id="p2-display-avatar">☸️</div>
+                <div class="w-14 h-14 rounded-full bg-[#fdfdfd] text-[#1c1c1c] flex items-center justify-center text-base font-black shadow-md border-2 border-[#ccc]">菩提</div>
+            </div>
+            <div class="text-4xl font-black text-stone-800 w-16" id="score-white">2</div>
+        </aside>
+    </main>
+
+    <!-- 1. 大廳設定 Modal -->
+    <div id="setup-modal" class="fixed inset-0 bg-black/60 z-[120] flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-[#fcfaf5] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-[#d3c9b1]">
+            <div class="bg-[#4a3623] py-4 text-center text-[#f4f0e6] font-bold tracking-wider text-xl">大廳設定</div>
+            <div class="p-6 space-y-5 text-center">
+                
+                <div class="flex justify-center gap-4">
+                    <label class="cursor-pointer flex items-center gap-2 font-bold text-stone-800 bg-stone-200 px-4 py-2 rounded-lg hover:bg-stone-300">
+                        <input type="radio" name="mode" value="1P" checked onchange="toggleMode()" class="w-5 h-5 accent-[#4a3623]"> 單機對弈
+                    </label>
+                    <label class="cursor-pointer flex items-center gap-2 font-bold text-stone-800 bg-stone-200 px-4 py-2 rounded-lg hover:bg-stone-300">
+                        <input type="radio" name="mode" value="2P" onchange="toggleMode()" class="w-5 h-5 accent-[#4a3623]"> 雙人對弈
+                    </label>
+                </div>
+
+                <div class="bg-stone-100 p-4 rounded-xl border border-stone-200 text-left">
+                    <h3 class="font-black text-stone-800 mb-2">先手 (黑子 / 煩惱)</h3>
+                    <div class="flex gap-2">
+                        <select id="p1-avatar" class="text-3xl bg-white border border-stone-300 rounded p-1 w-16 outline-none">
+                            <option value="🪷">🪷</option><option value="☸️">☸️</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
+                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
+                            <option value="⚽">⚽</option><option value="🏀">🏀</option><option value="⚾">⚾</option><option value="🎾">🎾</option>
+                        </select>
+                        <input type="text" id="p1-name" value="玩家1" placeholder="輸入姓名" class="flex-1 px-3 py-2 border border-stone-300 rounded font-bold text-stone-800 outline-none focus:border-[#4a3623]">
+                    </div>
+                </div>
+
+                <div class="bg-stone-100 p-4 rounded-xl border border-stone-200 text-left">
+                    <h3 class="font-black text-stone-800 mb-2">後手 (白子 / 菩提)</h3>
+                    <div class="flex gap-2">
+                        <select id="p2-avatar" class="text-3xl bg-white border border-stone-300 rounded p-1 w-16 outline-none">
+                            <option value="☸️">☸️</option><option value="🪷">🪷</option><option value="🔔">🔔</option><option value="🧘">🧘</option>
+                            <option value="➕">➕</option><option value="➖">➖</option><option value="✖️">✖️</option><option value="➗">➗</option><option value="♾️">♾️</option><option value="📐">📐</option>
+                            <option value="⚽">⚽</option><option value="🏀">🏀</option><option value="⚾">⚾</option><option value="🎾">🎾</option>
+                        </select>
+                        <input type="text" id="p2-name" value="電腦" disabled placeholder="輸入姓名" class="flex-1 px-3 py-2 border border-stone-300 rounded font-bold text-stone-800 outline-none focus:border-[#4a3623] disabled:opacity-50">
+                    </div>
+                </div>
+
+                <button onclick="goToRules()" class="bg-[#5b7752] hover:bg-[#486041] text-white px-8 py-3 rounded-full font-bold text-lg shadow-lg w-full active:scale-95 transition-transform">下一步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 規則 Modal -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/60 z-[110] hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-[#fcfaf5] w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-[#d3c9b1]">
+            <div class="bg-[#4a3623] py-4 text-center text-[#f4f0e6] font-bold tracking-wider text-xl">對弈規則</div>
+            <div class="p-6 space-y-4 text-stone-700 text-base md:text-lg leading-relaxed font-medium">
+                <ol class="list-decimal pl-5 space-y-2 font-bold">
+                    <li><span class="text-stone-900 bg-stone-200 px-1 rounded">黑子(煩惱)</span> 先手，<span class="text-stone-700 bg-green-100 px-1 rounded">白子(菩提)</span> 後手。</li>
+                    <li>請落子於能夾殺（轉化）敵方棋子之處。</li>
+                    <li class="text-red-700">【覺察修行】：落子後，請憑記憶點擊因本次落子而需轉化的棋子。</li>
+                    <li>若遺漏或點錯，系統會給予發光提示作為輔助。</li>
+                    <li>最新落子的位置會標示<span class="text-red-500 font-black">紅點</span>。</li>
+                    <li class="text-stone-500 font-normal text-sm mt-2">（單機對弈下，電腦將自動翻轉棋子）</li>
+                </ol>
+                <button onclick="startGame()" class="bg-[#4a3623] hover:bg-[#2c1a0e] text-white px-10 py-3 mt-4 rounded-full font-bold text-lg shadow-lg w-full active:scale-95 transition-transform">開始修行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 小叮嚀 Modal (犯錯提示) -->
+    <div id="alert-modal" class="fixed inset-0 bg-black/40 z-[130] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300 p-4">
+        <div class="bg-[#fcfaf5] w-full max-w-sm rounded-xl shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300 border-2 border-amber-500" id="alert-box">
+            <div class="bg-amber-500 py-3 text-center text-white font-bold tracking-wider text-lg">💡 小叮嚀</div>
+            <div class="p-6 text-center text-stone-800 font-bold" id="alert-msg"></div>
+            <div class="p-4 pt-0 flex justify-center">
+                <button onclick="closeAlert()" class="bg-stone-200 hover:bg-stone-300 text-stone-800 px-8 py-2 rounded-full font-bold transition-colors">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. 法語甘露 Modal (轉化 5 顆以上) -->
+    <div id="quote-modal" class="fixed inset-0 bg-black/70 z-[140] hidden flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="scroll-bg w-full max-w-md rounded-lg overflow-hidden flex flex-col items-center p-8 relative">
+            <!-- 裝飾 -->
+            <div class="absolute top-2 left-2 text-2xl opacity-50">☁️</div>
+            <div class="absolute bottom-2 right-2 text-2xl opacity-50">☁️</div>
+            
+            <h2 class="text-3xl font-black text-red-700 mb-2 drop-shadow">善哉！大轉煩惱！</h2>
+            <p class="text-stone-600 font-bold mb-6">一次轉化了 <span id="quote-count" class="text-2xl text-amber-600">5</span> 顆棋子</p>
+            
+            <div class="border-y-2 border-[#c7a97b] py-6 my-2 w-full text-center">
+                <p id="quote-text" class="text-2xl md:text-3xl font-black text-[#4a3623] leading-normal tracking-wide"></p>
+            </div>
+            
+            <p class="text-stone-400 text-sm mt-4 mb-6">—— 聖嚴法師 108自在語</p>
+            
+            <button onclick="closeQuoteModal()" class="bg-[#4a3623] text-white px-8 py-2 rounded-full font-bold shadow-md hover:bg-[#2c1a0e] transition">繼續</button>
+        </div>
+    </div>
+
+    <script>
+        // === 聖嚴法師 108 自在語 (精選) ===
+        const QUOTES = [
+            "慈悲沒有敵人，智慧不起煩惱。",
+            "面對它、接受它、處理它、放下它。",
+            "只要心安，東西南北都好。",
+            "心量要大，自我要小。",
+            "轉個念頭，廣結善緣。",
+            "放下布袋，何等自在。",
+            "少一點得失心，多一點慈悲心。",
+            "生命的意義在於服務，生活的價值在於奉獻。",
+            "用慚愧心看自己，用感恩心看世界。",
+            "不要拿自己的鞋子叫別人穿。"
+        ];
+
+        // === 遊戲常數與狀態 ===
+        const BOARD_SIZE = 8;
+        const EMPTY = 0, BLACK = 1, WHITE = 2;
+        const DIRS = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+
+        let logicalBoard = [], visualBoard = [];
+        let currentTurn = BLACK; 
+        let gameState = 'SETUP'; // SETUP, RULES, PLAYER_TURN, OPPONENT_TURN, MANUAL_FLIP, GAME_OVER
+        let pendingFlips = [];
+        let showHints = false; // 鷹架：是否顯示發光提示
+        let lastMove = null;
+
+        // 客製化
+        let gameMode = '1P';
+        let p1Name = '玩家1', p1Avatar = '🪷';
+        let p2Name = '電腦', p2Avatar = '☸️';
+
+        const boardEl = document.getElementById('board');
+        
+        // Modal Promise Resolver
+        let resolveQuote = null;
+
+        // === 設定與導航 ===
+        function toggleMode() {
+            const modeRadios = document.getElementsByName('mode');
+            for(let r of modeRadios) if(r.checked) gameMode = r.value;
+            
+            const p2NameInput = document.getElementById('p2-name');
+            if (gameMode === '1P') {
+                p2NameInput.value = '電腦';
+                p2NameInput.disabled = true;
+            } else {
+                p2NameInput.value = '玩家2';
+                p2NameInput.disabled = false;
+            }
+        }
+
+        function goToRules() {
+            p1Name = document.getElementById('p1-name').value || '玩家1';
+            p1Avatar = document.getElementById('p1-avatar').value;
+            p2Name = document.getElementById('p2-name').value || (gameMode === '1P' ? '電腦' : '玩家2');
+            p2Avatar = document.getElementById('p2-avatar').value;
+
+            document.getElementById('p1-display-name').innerText = p1Name;
+            document.getElementById('p1-display-avatar').innerText = p1Avatar;
+            document.getElementById('p2-display-name').innerText = p2Name;
+            document.getElementById('p2-display-avatar').innerText = p2Avatar;
+
+            document.getElementById('setup-modal').classList.add('hidden');
+            document.getElementById('rules-modal').classList.remove('hidden');
+        }
+
+        function resetToSetup() {
+            document.getElementById('game-main').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('game-main').classList.add('hidden');
+                document.getElementById('action-area').classList.add('hidden');
+                document.getElementById('setup-modal').classList.remove('hidden');
+                updateStatus('請設定對弈選項', 'text-stone-800 border-[#c1b8a6]');
+            }, 700);
+        }
+
+        // === 初始化 ===
+        function initBoardDOM() {
+            boardEl.innerHTML = '';
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                logicalBoard[y] = [];
+                visualBoard[y] = [];
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    logicalBoard[y][x] = EMPTY;
+                    visualBoard[y][x] = EMPTY;
+
+                    const cell = document.createElement('div');
+                    // 淺綠、淺淺綠交錯
+                    const isLight = (x + y) % 2 === 0;
+                    cell.className = `relative flex items-center justify-center cursor-pointer transition-colors duration-300 ${isLight ? 'bg-green-200' : 'bg-green-300'}`;
+                    cell.id = `cell-${y}-${x}`;
+                    cell.onclick = () => handleCellClick(x, y);
+
+                    cell.innerHTML = `
+                        <div class="valid-move-dot hidden"></div>
+                        <div class="last-move-dot hidden"></div>
+                        <div class="coin-wrapper hidden" id="coin-${y}-${x}">
+                            <div class="coin-face coin-black text-xs sm:text-lg lg:text-xl">煩惱</div>
+                            <div class="coin-face coin-white text-xs sm:text-lg lg:text-xl">菩提</div>
+                        </div>
+                    `;
+                    boardEl.appendChild(cell);
+                }
+            }
+            
+            logicalBoard[3][3] = WHITE; visualBoard[3][3] = WHITE;
+            logicalBoard[3][4] = BLACK; visualBoard[3][4] = BLACK;
+            logicalBoard[4][3] = BLACK; visualBoard[4][3] = BLACK;
+            logicalBoard[4][4] = WHITE; visualBoard[4][4] = WHITE;
+            lastMove = null;
+        }
+
+        function startGame() {
+            document.getElementById('rules-modal').classList.add('hidden');
+            document.getElementById('game-main').classList.remove('hidden');
+            setTimeout(() => document.getElementById('game-main').classList.remove('opacity-0'), 50);
+            
+            initBoardDOM();
+            renderBoard();
+            updateScore();
+            
+            currentTurn = BLACK;
+            startTurn();
+        }
+
+        // === 遊戲流程 ===
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        async function startTurn() {
+            showHints = false; 
+            const validMoves = getAllValidMoves(currentTurn);
+            
+            if (validMoves.length === 0) {
+                passTurn();
+                return;
+            }
+
+            if (gameMode === '1P' && currentTurn === WHITE) {
+                await executeComputerTurn(validMoves);
+            } else {
+                gameState = 'PLAYER_TURN';
+                const name = currentTurn === BLACK ? p1Name : p2Name;
+                updateStatus(`輪到 ${name}，請落子`, 'text-stone-800 border-[#d3c9b1]');
+                renderBoard();
+            }
+        }
+
+        function passTurn() {
+            const name = currentTurn === BLACK ? p1Name : p2Name;
+            currentTurn = currentTurn === BLACK ? WHITE : BLACK;
+            
+            if (getAllValidMoves(currentTurn).length === 0) {
+                endGame();
+            } else {
+                showAlert(`因緣不具足，${name} 無處落子，交換回合。`);
+                startTurn();
+            }
+        }
+
+        // 電腦自動邏輯
+        async function executeComputerTurn(validMoves) {
+            gameState = 'OPPONENT_TURN';
+            updateStatus(`【${p2Name}】 思考中...`, 'text-stone-800 bg-stone-200');
+            renderBoard(); 
+            
+            await sleep(1500); // 模擬思考
+
+            // 貪婪法：翻最多
+            validMoves.sort((a, b) => b.flips.length - a.flips.length);
+            const best = validMoves[0];
+
+            logicalBoard[best.y][best.x] = WHITE;
+            visualBoard[best.y][best.x] = WHITE;
+            lastMove = { x: best.x, y: best.y };
+            
+            renderBoard();
+            updateScore();
+
+            // 檢查法語
+            if (best.flips.length >= 5) {
+                await showQuoteModal(best.flips.length);
+            }
+
+            // 自動翻面動畫
+            for (let i = 0; i < best.flips.length; i++) {
+                await sleep(400);
+                const f = best.flips[i];
+                logicalBoard[f.y][f.x] = WHITE;
+                visualBoard[f.y][f.x] = WHITE;
+                renderBoard();
+                updateScore();
+            }
+
+            await sleep(500);
+            currentTurn = BLACK; 
+            startTurn();
+        }
+
+        // 玩家手動點擊邏輯
+        async function handleCellClick(x, y) {
+            if (gameState === 'PLAYER_TURN') {
+                const moves = getAllValidMoves(currentTurn);
+                const move = moves.find(m => m.x === x && m.y === y);
+                
+                if (move) {
+                    gameState = 'PROCESSING'; // 暫鎖
+                    
+                    logicalBoard[y][x] = currentTurn;
+                    visualBoard[y][x] = currentTurn; 
+                    lastMove = { x, y };
+                    pendingFlips = [...move.flips];
+                    showHints = false; 
+                    
+                    renderBoard();
+                    updateScore();
+
+                    // 檢查法語
+                    if (pendingFlips.length >= 5) {
+                        await showQuoteModal(pendingFlips.length);
+                    }
+                    
+                    gameState = 'MANUAL_FLIP';
+                    updateManualFlipStatus();
+                    renderBoard(); // 重新渲染確保點擊狀態正常
+                }
+            } 
+            else if (gameState === 'MANUAL_FLIP') {
+                const idx = pendingFlips.findIndex(f => f.x === x && f.y === y);
+                if (idx !== -1) {
+                    // 點對了
+                    logicalBoard[y][x] = currentTurn;
+                    visualBoard[y][x] = currentTurn; 
+                    pendingFlips.splice(idx, 1);
+                    
+                    renderBoard();
+                    updateScore();
+
+                    if (pendingFlips.length === 0) {
+                        currentTurn = currentTurn === BLACK ? WHITE : BLACK;
+                        startTurn();
+                    } else {
+                        updateManualFlipStatus();
+                    }
+                } else {
+                    // 點錯了：啟動鷹架
+                    showHints = true;
+                    renderBoard(); 
+                    showAlert("請點擊因本次落子而需轉化的棋子。<br>（可參考盤面上的發光提示）");
+                }
+            }
+        }
+
+        // === 演算法 ===
+        function getFlipsForMove(x, y, player) {
+            let flips = [];
+            if (logicalBoard[y][x] !== EMPTY) return flips;
+            const opp = player === BLACK ? WHITE : BLACK;
+
+            for (let [dx, dy] of DIRS) {
+                let curr = [];
+                let nx = x + dx, ny = y + dy;
+                while (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && logicalBoard[ny][nx] === opp) {
+                    curr.push({x: nx, y: ny});
+                    nx += dx; ny += dy;
+                }
+                if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && logicalBoard[ny][nx] === player) {
+                    flips.push(...curr);
+                }
+            }
+            return flips;
+        }
+
+        function getAllValidMoves(player) {
+            let m = [];
+            for (let y=0; y<BOARD_SIZE; y++) {
+                for (let x=0; x<BOARD_SIZE; x++) {
+                    const f = getFlipsForMove(x, y, player);
+                    if (f.length > 0) m.push({x, y, flips: f});
+                }
+            }
+            return m;
+        }
+
+        // === 渲染 ===
+        function renderBoard() {
+            let validMoves = (gameState === 'PLAYER_TURN') ? getAllValidMoves(currentTurn) : [];
+
+            for (let y = 0; y < BOARD_SIZE; y++) {
+                for (let x = 0; x < BOARD_SIZE; x++) {
+                    const cell = document.getElementById(`cell-${y}-${x}`);
+                    const coin = document.getElementById(`coin-${y}-${x}`);
+                    const validDot = cell.querySelector('.valid-move-dot');
+                    const lastDot = cell.querySelector('.last-move-dot');
+                    const val = visualBoard[y][x];
+
+                    // 棋子 3D
+                    if (val === EMPTY) {
+                        coin.classList.add('hidden');
+                    } else {
+                        coin.classList.remove('hidden');
+                        if (val === WHITE) coin.classList.add('flipped');
+                        else coin.classList.remove('flipped');
+                    }
+
+                    // 重置樣式
+                    cell.classList.remove('ring-4', 'ring-yellow-400', 'animate-pulse', 'z-10');
+                    validDot.classList.add('hidden');
+                    lastDot.classList.add('hidden');
+
+                    // 最新落子紅點
+                    if (lastMove && lastMove.x === x && lastMove.y === y) {
+                        lastDot.classList.remove('hidden');
+                    }
+
+                    // 可落子提示 (僅小點，不發光)
+                    if (gameState === 'PLAYER_TURN' && val === EMPTY && validMoves.some(m => m.x === x && m.y === y)) {
+                        validDot.classList.remove('hidden');
+                        // Desktop hover effect can be added via CSS, but JS explicit control is safer for mobile
+                    }
+
+                    // 犯錯鷹架提示
+                    if (gameState === 'MANUAL_FLIP' && showHints && pendingFlips.some(f => f.x === x && f.y === y)) {
+                        cell.classList.add('ring-4', 'ring-yellow-400', 'animate-pulse', 'z-10');
+                    }
+                }
+            }
+        }
+
+        function updateScore() {
+            let b = 0, w = 0;
+            for(let y=0; y<BOARD_SIZE; y++) for(let x=0; x<BOARD_SIZE; x++) {
+                if(visualBoard[y][x] === BLACK) b++;
+                if(visualBoard[y][x] === WHITE) w++;
+            }
+            document.getElementById('score-black').innerText = b;
+            document.getElementById('score-white').innerText = w;
+            return {b, w};
+        }
+
+        function updateStatus(text, colorClasses = 'bg-white text-stone-800') {
+            const sb = document.getElementById('status-bar');
+            sb.innerHTML = text;
+            sb.className = `inline-block px-6 py-2 rounded-full font-bold text-base md:text-xl border-2 shadow-sm transition-all duration-300 ${colorClasses}`;
+        }
+
+        function updateManualFlipStatus() {
+            updateStatus(`⚠️ 請點擊需翻面的棋子 (剩餘 ${pendingFlips.length} 顆)`, 'text-red-700 bg-red-50 border-red-400 animate-pulse');
+        }
+
+        // === 結束與彈窗 ===
+        function endGame() {
+            gameState = 'GAME_OVER';
+            const {b, w} = updateScore();
+            let msg = '';
+            
+            if (b > w) {
+                msg = `棋局結束！${p1Name}(黑) 勝出`;
+                updateStatus(msg, 'text-stone-800 bg-stone-200 border-stone-500');
+            } else if (w > b) {
+                msg = `功德圓滿！${p2Name}(白) 勝出`;
+                updateStatus(msg, 'text-green-800 bg-green-100 border-green-500');
+            } else {
+                msg = '平分秋色，和局。';
+                updateStatus(msg, 'text-amber-800 bg-amber-100 border-amber-500');
+            }
+
+            document.getElementById('action-area').classList.remove('hidden');
+            setTimeout(() => showAlert(`【棋局結束】<br>${p1Name}(黑): ${b} vs ${p2Name}(白): ${w}<br><br>${msg}`), 800);
+        }
+
+        function showAlert(msgHTML) {
+            const m = document.getElementById('alert-modal');
+            const b = document.getElementById('alert-box');
+            document.getElementById('alert-msg').innerHTML = msgHTML;
+            m.classList.remove('opacity-0', 'pointer-events-none');
+            b.classList.remove('scale-95');
+        }
+
+        function closeAlert() {
+            const m = document.getElementById('alert-modal');
+            const b = document.getElementById('alert-box');
+            m.classList.add('opacity-0', 'pointer-events-none');
+            b.classList.add('scale-95');
+        }
+
+        // 法語甘露 Promise Modal
+        function showQuoteModal(count) {
+            return new Promise(resolve => {
+                resolveQuote = resolve;
+                const quote = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+                document.getElementById('quote-text').innerText = quote;
+                document.getElementById('quote-count').innerText = count;
+                document.getElementById('quote-modal').classList.remove('hidden');
+            });
+        }
+
+        function closeQuoteModal() {
+            document.getElementById('quote-modal').classList.add('hidden');
+            if (resolveQuote) {
+                resolveQuote();
+                resolveQuote = null;
+            }
+        }
+    </script>
+</body>
+</html>
