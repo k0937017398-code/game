@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>因陀羅網影響力實驗室 (雙機連線版)</title>
+    <style>
+        * {
+            box-sizing: border-box; margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+            user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            background-color: #030712; color: #e2e8f0; width: 100vw; height: 100vh;
+            overflow: hidden; display: flex; position: relative;
+        }
+        
+        /* 遊戲大廳 */
+        #lobby-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(3, 7, 18, 0.95); backdrop-filter: blur(10px);
+            z-index: 100; display: flex; justify-content: center; align-items: center; padding: 16px;
+        }
+        .lobby-box {
+            background: #0f172a; border: 2px solid #38bdf8; border-radius: 18px;
+            width: 860px; max-width: 96vw; max-height: 94vh; display: flex; overflow: hidden;
+            box-shadow: 0 25px 60px rgba(56, 189, 248, 0.25);
+        }
+        .lobby-left { flex: 1.2; background: #1e293b; padding: 36px 30px; border-right: 2px solid #334155; display: flex; flex-direction: column; justify-content: center; }
+        .lobby-right { flex: 1; padding: 36px 30px; display: flex; flex-direction: column; justify-content: center; }
+        .lobby-title { font-size: 26px; font-weight: 900; color: #fbbf24; text-shadow: 2px 2px 0px #b45309; margin-bottom: 16px; }
+        .lobby-rules { list-style: none; color: #cbd5e1; font-size: 14.5px; line-height: 1.6; }
+        .lobby-rules li { margin-bottom: 10px; padding-left: 24px; position: relative; }
+        .lobby-rules li::before { content: '✨'; position: absolute; left: 0; top: 0; font-size: 13px; }
+        
+        .input-group { margin-bottom: 16px; }
+        .input-group label { display: block; margin-bottom: 6px; font-weight: bold; font-size: 15px; color: #38bdf8; }
+        .input-group select, .input-group input {
+            width: 100%; padding: 14px 16px; border-radius: 10px; border: 2px solid #334155;
+            background: #020617; color: #f8fafc; font-size: 17px; outline: none; transition: all 0.2s; font-weight: bold;
+        }
+        .input-group select:focus, .input-group input:focus { border-color: #fbbf24; box-shadow: 0 0 10px rgba(251, 191, 36, 0.35); }
+
+        .btn-start {
+            width: 100%; padding: 16px; font-size: 18px; font-weight: bold; color: #0f172a;
+            background: #fbbf24; border: none; border-radius: 10px; cursor: pointer; margin-top: 6px; transition: all 0.2s;
+        }
+        .btn-start:active { background: #f59e0b; transform: scale(0.98); }
+        .btn-reset-group {
+            background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 8px; font-size: 13px;
+            border-radius: 6px; margin-top: 10px; cursor: pointer; width: 100%;
+        }
+
+        /* 等待連線畫面 */
+        #waiting-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(3, 7, 18, 0.9); backdrop-filter: blur(8px);
+            z-index: 90; display: none; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #334155; border-top: 5px solid #38bdf8;
+            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 平板主版面 */
+        #app-container {
+            width: 100vw; height: 100vh; display: grid; grid-template-columns: 1.15fr 1fr;
+            gap: 14px; padding: 14px; background: #0b1329;
+        }
+
+        /* 左側網絡 */
+        #left-stage {
+            display: flex; flex-direction: column; align-items: center; position: relative;
+            background: #020617; border: 2px solid #334155; border-radius: 14px; padding: 14px; overflow: hidden;
+        }
+        .stage-header { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-bottom: 8px; border-bottom: 1px solid #1e293b; }
+        .title { font-size: 22px; font-weight: 900; color: #fbbf24; text-shadow: 2px 2px 0px #b45309; }
+        .hud-stats { display: flex; gap: 10px; }
+        .badge { font-size: 13px; font-weight: bold; padding: 4px 10px; border-radius: 20px; }
+        .badge-round { background: rgba(34, 211, 238, 0.15); border: 1px solid #22d3ee; color: #22d3ee; }
+        .badge-match { background: rgba(251, 191, 36, 0.15); border: 1px solid #fbbf24; color: #fbbf24; }
+        #network-canvas { width: 100%; flex-grow: 1; border-radius: 10px; margin-top: 8px; }
+
+        /* 右側觸控控制台 */
+        #right-panel { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; padding-right: 2px; }
+        .panel-box { background: #1e293b; border: 2px solid #475569; border-radius: 14px; padding: 16px; position: relative; }
+        
+        .protagonist-banner {
+            text-align: center; padding: 12px; font-size: 17px; font-weight: 900; border-radius: 10px;
+            margin-bottom: 12px; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.5); line-height: 1.4;
+        }
+        .banner-me-protagonist { background: linear-gradient(135deg, #0284c7, #38bdf8); border: 2px solid #7dd3fc; }
+        .banner-me-predictor { background: linear-gradient(135deg, #be185d, #f472b6); border: 2px solid #fbcfe8; }
+
+        .q-category { font-size: 13px; color: #fbbf24; font-weight: bold; margin-bottom: 6px; }
+        .question-text { font-size: 15.5px; line-height: 1.5; color: #f8fafc; margin-bottom: 14px; font-weight: 700; }
+
+        /* 雙機分工專屬欄位 */
+        .dual-inputs-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 10px; margin-bottom: 10px; }
+        .player-col { background: #0f172a; border: 1.5px solid #334155; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .player-col.is-active { border-color: #38bdf8; box-shadow: 0 0 12px rgba(56, 189, 248, 0.15); }
+        .player-header { font-size: 14.5px; font-weight: bold; text-align: center; padding-bottom: 6px; border-bottom: 1px dashed #475569; line-height: 1.35; color: #fff; }
+        .sub-desc { font-size: 12px; font-weight: normal; color: #94a3b8; display: block; margin-top: 2px; }
+
+        /* 按鈕樣式 */
+        .btn-choice {
+            padding: 12px; font-size: 13.5px; line-height: 1.4; font-weight: 600; color: #e2e8f0;
+            background: #111827; border: 2px solid #475569; border-radius: 8px; cursor: pointer; text-align: left; min-height: 65px; display: flex; align-items: center;
+        }
+        .btn-choice:active:not(:disabled) { transform: scale(0.97); background: #334155; }
+        .btn-choice.selected-locked { background: #047857 !important; border-color: #10b981 !important; color: #fff !important; font-weight: bold; justify-content: center; }
+        
+        /* 隊友狀態卡片 */
+        .status-card { height: 100%; display: flex; justify-content: center; align-items: center; font-size: 15px; font-weight: bold; border-radius: 8px; text-align: center; padding: 10px; line-height: 1.5; }
+        .status-waiting { background: #1e293b; color: #94a3b8; border: 2px dashed #475569; }
+        .status-ready { background: #064e3b; color: #34d399; border: 2px solid #10b981; }
+
+        /* 揭曉面板 */
+        #reveal-box {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 7, 18, 0.95); border-radius: 14px;
+            display: none; flex-direction: column; justify-content: center; align-items: center; padding: 25px; text-align: center; z-index: 50;
+        }
+        .collision-title { font-size: 22px; font-weight: 900; margin-bottom: 12px; }
+        .collision-desc { font-size: 15.5px; line-height: 1.6; color: #cbd5e1; margin-bottom: 20px; }
+        .btn-next { width: 100%; padding: 15px; font-size: 17px; font-weight: bold; background: #fbbf24; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; }
+
+        /* 診斷書 */
+        #diagnosis-box { display: none; text-align: center; border-color: #38bdf8; }
+        .diag-title { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+        .diag-subtitle { font-size: 14px; color: #94a3b8; margin-bottom: 12px; font-weight: bold; }
+        .diag-card { background: #0b1329; border: 2px dashed #fbbf24; border-radius: 12px; padding: 16px; margin: 12px 0; text-align: left; line-height: 1.7; font-size: 14.5px; }
+    </style>
+</head>
+<body>
+
+<!-- 大廳選組介面 -->
+<div id="lobby-overlay">
+    <div class="lobby-box">
+        <div class="lobby-left">
+            <h1 class="lobby-title" style="font-size:24px;">因陀羅網影響力實驗室</h1>
+            <ul class="lobby-rules">
+                <li>本遊戲由<b>兩台平板連線協作</b>。</li>
+                <li>請與同桌夥伴商量，<b>選擇相同的「組別編號」</b>。</li>
+                <li>一人擔任<b>主角</b>（選真實心聲），另一人擔任<b>預測者</b>（猜測對方反應）。</li>
+                <li>雙方皆送出鎖定後，<b>光束將同步在網路上對撞！</b></li>
+            </ul>
+        </div>
+        <div class="lobby-right">
+            <div class="input-group">
+                <label>📌 選擇配對組別</label>
+                <select id="group-select"></select>
+            </div>
+            <div class="input-group">
+                <label>👤 你的姓名 / 座號</label>
+                <input type="text" id="player-name-input" placeholder="例如：7號 小明" maxlength="8">
+            </div>
+            <button class="btn-start" id="btn-enter-lobby">連線進入實驗室 ➔</button>
+            <button class="btn-reset-group" id="btn-force-reset">⚠️ 清除本組卡關狀態</button>
+        </div>
+    </div>
+</div>
+
+<!-- 等待隊友加入 -->
+<div id="waiting-overlay">
+    <div class="spinner"></div>
+    <h2 style="color:#fbbf24; margin-bottom:8px;" id="waiting-title">等待中...</h2>
+    <p style="color:#94a3b8; font-size:16px;">請同桌隊友進入同一組別</p>
+</div>
+
+<!-- 主遊戲介面 -->
+<div id="app-container">
+    <!-- 左側畫布 -->
+    <div id="left-stage">
+        <div class="stage-header">
+            <div>
+                <h1 class="title">因陀羅網影響力</h1>
+                <span style="font-size: 13px; color: #94a3b8; font-weight:bold;" id="room-label">連線中...</span>
+            </div>
+            <div class="hud-stats">
+                <div class="badge badge-round">第 <span id="stat-round">1</span>/8 題</div>
+                <div class="badge badge-match">默契值: <span id="stat-matches">0</span></div>
+            </div>
+        </div>
+        <canvas id="network-canvas"></canvas>
+    </div>
+
+    <!-- 右側任務面板 -->
+    <div id="right-panel">
+        <div class="panel-box" id="gameplay-box">
+            <div id="protagonist-banner" class="protagonist-banner">載入中...</div>
+            
+            <div class="q-category" id="q-category">維度標籤</div>
+            <div class="question-text" id="q-text">情境載入中...</div>
+
+            <!-- 專屬視角分欄 -->
+            <div class="dual-inputs-grid">
+                <div class="player-col is-active">
+                    <div class="player-header" id="label-my-task">【我的任務】</div>
+                    <div id="my-buttons" style="display:flex; flex-direction:column; gap:8px;"></div>
+                </div>
+                <div class="player-col">
+                    <div class="player-header" id="label-partner-task" style="color:#f472b6;">【隊友狀態】</div>
+                    <div id="partner-status-box" class="status-card status-waiting">⏳ 隊友思考中...</div>
+                </div>
+            </div>
+
+            <!-- 開牌彈窗 (絕對置中覆蓋右側) -->
+            <div id="reveal-box">
+                <div class="collision-title" id="reveal-title">💥 對撞完成！</div>
+                <div class="collision-desc" id="reveal-desc">說明文字...</div>
+                <button class="btn-next" id="btn-next-round">進入下一題 ➔</button>
+            </div>
+        </div>
+
+        <!-- 結算診斷書 -->
+        <div class="panel-box" id="diagnosis-box">
+            <div class="diag-title" id="diag-headline">🏆 診斷報告</div>
+            <div class="diag-subtitle" id="diag-players">雙人專屬報告</div>
+            <div class="diag-card">
+                <div class="diag-score">
+                    <span>默契指數：<b style="color:#fbbf24" id="diag-match-score">0/8</b></span>
+                    <span>網絡祥和度：<b style="color:#38bdf8" id="diag-harmony-score">0%</b></span>
+                </div>
+                <div id="diag-feedback-text">評語載入中...</div>
+            </div>
+            <button class="btn-next" id="btn-exit-game">結束並返回大廳</button>
+        </div>
+    </div>
+</div>
+
+<!-- 導入 Firebase 模組 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // ==========================================
+    // ⚠️ 老師請在此處填寫您的 Firebase Config 金鑰
+    // ==========================================
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+        projectId: "YOUR_PROJECT",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    
+    // 防呆：如果沒有填寫，先隨機產生一組讓前端可以單機測試畫面
+    let app, db;
+    try { app = initializeApp(firebaseConfig); db = getDatabase(app); } catch(e) { console.warn("Firebase 未設定，將無法連線。"); }
+
+    const rawQuestions = [
+        { category: "分組與合作困境", text: "理化課宣布自由分組，小圈圈迅速找好隊友，你跟另外兩位平時不講話的同學落單了。你會：", red: "當場不爽開酸：「分組根本幼稚，這班級爛透了！」", gray: "默默趴在桌上裝睡，等老師隨便把你塞進某組。", gold: "主動走向那兩位同學：「我們都還沒滿，要不要直接湊一組試試？」" },
+        { category: "分組與合作困境", text: "分組報告明天要交，同組強勢的朋友負責做簡報卻都在打手遊，還叫你幫他做。你會：", red: "在大群組截圖公審：「不想做就滾，不要當寄生蟲！」", gray: "委屈吞下去，邊哭邊熬夜幫他做完，假裝是他做的。", gold: "私下明確告知底線：「各做各的，如果你不補齊，我會誠實跟老師回報分工。」" },
+        { category: "分組與合作困境", text: "露營野炊要分組，平時最好的死黨跑來找你同組，但他習慣很差且從不幫忙。你會：", red: "當眾翻白眼拒絕：「跟你同組一定墊底，我才不要！」", gray: "不敢拒絕而勉強答應，結果整趟活動邊做邊擺臭臉冷戰。", gold: "私下坦白約定：「可以同組，但一定要分工明確，你能答應我們再一起！」" },
+        { category: "手機與網路使用", text: "手遊打排位賽進入最後勝負關鍵一分鐘，媽媽突然推門大罵要沒收手機。你會：", red: "用力推開媽媽大吼：「妳煩不煩啊！差這一分鐘會死嗎！」", gray: "氣憤把手機砸在床上，晚餐絕食不吃，鎖在房裡蒙頭大睡。", gold: "角色停在安全區快速說：「媽對不起！再 60 秒打完我立刻關機吃飯，等我一下！」" },
+        { category: "手機與網路使用", text: "滑 IG 發現班上幾位常一起打球的同學私下聚會發合照，完全沒有找你。你會：", red: "發黑底白字限動狂酸：「表面一套背後一套，虛偽的人不要噁心我。」", gray: "默默退追他們，隔天在班上把他們當空氣，假裝自己根本不在意。", gold: "放下手機去跑步，提醒自己「別人有交友自由，這不代表我沒價值」。" },
+        { category: "手機與網路使用", text: "考前一晚答應爸媽早點睡，卻偷滑短影音到半夜一點被爸爸查房當場抓到。你會：", red: "硬拗說謊：「我只是看時間！你們每天懷疑我，根本把我當犯人！」", gray: "低頭面無表情一聲不吭，隨便爸爸怎麼罵都擺出死豬不怕開水燙的態度。", gold: "主動交出手機認錯：「爸對不起，我確實沒自制力，手機先給你保管。」" },
+        { category: "手機與網路使用", text: "連線打遊戲你不小心出現重大失誤滅團，同學開麥狂嘴你：「到底會不會玩？跟白痴一樣！」你會：", red: "當場開麥三字經罵回去，甚至直接送頭掛網擺爛。", gray: "默默退出語音，整晚悶悶不樂，自卑覺得自己什麼都做不好。", gold: "冷靜開麥：「那波我失誤我認，但好好討論戰術就好，不用人身攻擊。」" },
+        { category: "學業與升學困境", text: "每天放學苦讀理化到半夜，考卷發下來只有 52 分，隔壁上課睡覺的考了 85 分。你會：", red: "撕爛考卷大吼：「努力根本是笑話，讀書沒用，反正我就是笨！」", gray: "把考卷塞抽屜，從此上課徹底放空畫畫，放棄這科。", gold: "難過哭一場後，帶著考卷找老師：「老師，我花很多時間但抓不到盲點，能幫我看看嗎？」" },
+        { category: "學業與升學困境", text: "明天作業很多完全寫不完，同學在大群組發出「整份數學考卷高清解答照」。你會：", red: "全部抄完，還順手轉發炫耀自己弄到了現成解答。", gray: "抄幾題、空幾題假裝自己有算，心存僥倖希望老師改不仔細。", gold: "堅持只寫自己會的部分，隔天誠實跟老師說明進度並利用放學補齊。" },
+        { category: "學業與升學困境", text: "課堂恍神被老師點名站起來念課文，你不知道念到哪裡，台下傳來零星竊笑。你會：", red: "覺得丟臉，惱羞成怒瞪向同學：「笑屁啊！你們很厲害是不是？」", gray: "死盯著桌子不發一語，直到老師生氣罰站，整節課僵持住。", gold: "大方笑一下承認：「報告老師我剛恍神了，請問念到哪一段？我馬上跟上。」" },
+        { category: "學業與升學困境", text: "家庭聚餐親戚公開當眾比較成績：「某某考得比你差，你要引以為戒。」爸媽臉色超難看。你會：", red: "當場摔筷子罵親戚：「你們真的很沒水準！吃頓飯也要比，討厭你們！」", gray: "低頭扒飯一句不吭，心裡充滿屈辱，暗自發誓以後再也不出席聚會。", gold: "微笑大度回應：「表哥確實厲害！不過我這次社會科進步了十分，我也會繼續加油。」" },
+        { category: "家長管教與衝突", text: "回到房間看見媽媽正坐在書桌前翻看你鎖在抽屜的私密日記本。你會：", red: "衝過去把日記搶過來撕爛：「妳是小偷嗎！侵犯人權！我恨死妳了！」", gray: "奪門而出在街上遊蕩到半夜，從此對家人徹底關閉心門。", gold: "深呼吸說：「媽請妳放回桌上。未經同意看日記讓我很受傷，我們需要好好談談隱私。」" },
+        { category: "家長管教與衝突", text: "好友生日全班約聚餐，爸爸一口回絕：「國三都要會考了還整天想玩！不准去，在家刷題。」你會：", red: "大哭踢門：「你們只在乎成績！根本把我當考試機器，根本不愛我！」", gray: "表面說好，當天偷偷翻牆溜出去，一路提心吊膽祈禱別穿幫。", gold: "拿讀書計畫跟爸爸協商：「我週六先刷完兩本題本，週日讓我去兩小時，三點準時回家可以嗎？」" },
+        { category: "家長管教與衝突", text: "好不容易存錢買了畫具或跳舞裝備，媽媽冷諷：「搞這些會考又不會加分，浪費錢又浪費時間。」你會：", red: "把東西摔地上大吼：「妳懂什麼！妳眼裡只有分數，庸俗透頂！」", gray: "默默把裝備收起來扔掉，從此放棄熱愛，心態變得極度厭世。", gold: "認真看著媽媽說：「我知道妳擔心課業，但畫畫是我的壓力出口，我會顧好底線，也請妳尊重我。」" },
+        { category: "家長管教與衝突", text: "爸爸在公司被老闆罵一肚子火，回家看到你鞋子沒擺正便破口大罵你長大沒出息。你會：", red: "大聲頂撞：「在外面受氣回家耍什麼威風？有種去罵你主管啊！」", gray: "嚇得全身發抖默默哭，真的以為自己是拖累全家的累贅。", gold: "意識到這是爸爸轉嫁的情緒，默默排好鞋子，倒杯水給他：「爸辛苦了，先喝口水吧。」" },
+        { category: "同儕人際與校園生活", text: "好死黨最近跟班上最常嘲笑你的死對頭走得很近，下課還一起去福利社，冷落了你。你會：", red: "衝過去質問死黨：「你跟他好是什麼意思？選他還是選我？叛徒！」", gray: "在一旁生悶氣，把這段友情判死刑，覺得世界上沒有人值得信任。", gold: "找時機坦率說出感受：「看你們走很近我有點吃醋跟難受，因為他以前笑過我，希望能聽聽我的感受。」" },
+        { category: "同儕人際與校園生活", text: "你暗戀別人的秘密被好友不小心大嘴巴講出去，走廊大家都在起鬨嘲笑。好友來道歉。你會：", red: "在走廊大吼他是大嘴巴，並把他的八卦也大聲廣播讓全校知道。", gray: "痛哭逃回教室用外套包住頭，恨不得找地洞鑽進去，從此封閉自己。", gold: "嚴肅告訴他：「這對我傷害很大，現在請你跟我一起去澄清是開玩笑的謠言，把傷害降到最低。」" },
+        { category: "同儕人際與校園生活", text: "當風紀股長被老師要求記名，後排常打架的同學威脅你：「敢記試試看，放學揍你。」你會：", red: "當場大喊老師告狀：「老師！他們威脅要揍我，把他們全抓去學務處！」", gray: "嚇到放下筆裝沒看見，任憑全班午休結束被老師罰站，害全班被罵。", gold: "當下不硬碰硬激化衝突，下課私下向導師反映安全顧慮，請老師以巡堂名義介入。" },
+        { category: "同儕人際與校園生活", text: "體育課排球接球不靈活，幾位同學在場邊模仿你的動作起鬨大笑。你會：", red: "把排球往嘲笑的人臉上用力砸過去，大罵粗話。", gray: "強忍淚水低頭躲到健康中心，以後體育課都裝病不敢打球。", gold: "停下動作直視帶頭者，清楚大聲說：「開玩笑要大家都覺得好笑才叫玩笑。請你們停止。」" },
+        { category: "同儕人際與校園生活", text: "大隊接力本來第一名，你在最後交接棒失誤掉棒變成最後一名，全班氣氛一片死寂。你會：", red: "先發制人甩鍋怪隊友：「是他傳得太爛我才沒接好！根本不是我的問題！」", gray: "覺得自己是全班罪人，收拾書包直接翹課離開學校不敢面對。", gold: "走到全班面前鞠躬承認：「對不起大家，是我關鍵失誤掉棒，浪費了大家的努力，真的很抱歉。」" }
+    ];
+
+    // 全域變數
+    let currentGroupId = "group_01";
+    let myRole = null; // 'P1' 或 'P2'
+    let myName = "";
+    let partnerName = "";
+    let roomRef = null;
+    let localRevealRound = 0; // 防止重複播動畫
+
+    const TOTAL_ROUNDS = 8;
+    const canvas = document.getElementById('network-canvas');
+    const ctx = canvas.getContext('2d');
+    let nodes = [], edges = [], particles = [];
+
+    const COLOR_RED = '#f43f5e', COLOR_GRAY = '#94a3b8', COLOR_GOLD = '#fbbf24', COLOR_PURPLE = '#c084fc';
+
+    // 1. 大廳初始化
+    const groupSelect = document.getElementById('group-select');
+    for (let i = 1; i <= 15; i++) {
+        let opt = document.createElement('option');
+        opt.value = `group_${i < 10 ? '0'+i : i}`;
+        opt.innerText = `第 ${i < 10 ? '0'+i : i} 組 (桌號 ${i})`;
+        groupSelect.appendChild(opt);
+    }
+
+    // 2. 畫布網路拓撲 (確保 100% 互連無死角)
+    function resizeCanvas() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width || 600;
+        canvas.height = rect.height || 500;
+    }
+    window.addEventListener('resize', () => { if(nodes.length) { resizeCanvas(); draw(); } });
+
+    function initNetwork() {
+        resizeCanvas();
+        nodes = []; edges = []; particles = [];
+        const w = canvas.width, h = canvas.height, cx = w/2, cy = h/2;
+        const rings = [{c:4, r:Math.min(w,h)*0.18}, {c:10, r:Math.min(w,h)*0.4}, {c:14, r:Math.min(w,h)*0.68}];
+        
+        let idCounter = 0;
+        rings.forEach((ring, rIdx) => {
+            for (let i=0; i<ring.c; i++) {
+                let angle = (i/ring.c)*Math.PI*2 + (rIdx*0.2);
+                let rx = cx + (ring.r + (Math.random()-0.5)*20)*Math.cos(angle);
+                let ry = cy + (ring.r + (Math.random()-0.5)*20)*Math.sin(angle);
+                rx = Math.max(30, Math.min(w-30, rx)); ry = Math.max(30, Math.min(h-30, ry));
+                nodes.push({ id: idCounter++, x: rx, y: ry, color: (idCounter%3===0)?COLOR_RED:COLOR_GRAY, pulse: Math.random()*Math.PI, isShielded: false });
+            }
+        });
+
+        let startIdx = 0;
+        rings.forEach(ring => {
+            for (let i=0; i<ring.c; i++) edges.push([startIdx+i, startIdx+((i+1)%ring.c)]);
+            startIdx += ring.c;
+        });
+        for(let i=0; i<4; i++) { edges.push([i, 4+i*2]); edges.push([i, 4+(i*2+1)%10]); }
+        for(let i=0; i<10; i++) edges.push([4+i, 14+Math.floor(i*1.4)]);
+    }
+
+    // 3. 連線邏輯
+    document.getElementById('btn-enter-lobby').addEventListener('click', async () => {
+        myName = document.getElementById('player-name-input').value.trim();
+        if (!myName) return alert("請輸入您的姓名或座號！");
+        
+        currentGroupId = groupSelect.value;
+        roomRef = ref(db, `indra_class_rooms/${currentGroupId}`);
+        
+        document.getElementById('lobby-overlay').style.display = 'none';
+        document.getElementById('waiting-overlay').style.display = 'flex';
+        document.getElementById('waiting-title').innerText = `已進入 ${groupSelect.options[groupSelect.selectedIndex].text}`;
+        
+        initNetwork();
+
+        // 讀取當前房間資料分配角色
+        const snap = await get(roomRef);
+        const data = snap.val();
+
+        if (!data || !data.p1) {
+            myRole = 'P1';
+            await set(roomRef, {
+                p1: { name: myName, choice: null, ready: false },
+                p2: null, round: 1, status: "waiting", matchCount: 0,
+                qBag: [...rawQuestions].sort(()=>Math.random()-0.5) // P1 負責洗牌上傳雲端
+            });
+        } else if (!data.p2) {
+            myRole = 'P2';
+            await update(roomRef, {
+                p2: { name: myName, choice: null, ready: false },
+                status: "playing"
+            });
+        } else {
+            alert("該組已滿員！請確認是否選錯組別。");
+            location.reload(); return;
+        }
+
+        // 啟動監聽
+        onValue(roomRef, (snapshot) => {
+            const roomData = snapshot.val();
+            if (!roomData) return;
+            handleRoomSync(roomData);
+        });
+    });
+
+    document.getElementById('btn-force-reset').addEventListener('click', async () => {
+        if (confirm("確定要重置這組的連線嗎？")) {
+            await set(ref(db, `indra_class_rooms/${groupSelect.value}`), null);
+            alert("清除完成，可重新連線。");
+        }
+    });
+
+    // 4. 核心同步路由
+    function handleRoomSync(data) {
+        if (data.status !== 'waiting') document.getElementById('waiting-overlay').style.display = 'none';
+        
+        document.getElementById('stat-round').innerText = data.round;
+        document.getElementById('stat-matches').innerText = data.matchCount;
+        
+        partnerName = (myRole === 'P1') ? (data.p2?.name || "隊友") : (data.p1?.name || "隊友");
+        document.getElementById('room-label').innerText = `${groupSelect.options[groupSelect.selectedIndex].text} | ${myName} & ${partnerName}`;
+
+        if (data.status === 'playing') handlePlaying(data);
+        if (data.status === 'reveal') handleReveal(data);
+        if (data.status === 'finished') handleFinish(data);
+
+        // 如果兩人都鎖定，由 P1 統一廣播對撞
+        if (data.status === 'playing' && data.p1?.ready && data.p2?.ready && myRole === 'P1') {
+            update(roomRef, { status: 'reveal' });
+        }
+    }
+
+    // 5. 回合答題狀態
+    function handlePlaying(data) {
+        document.getElementById('reveal-box').style.display = 'none';
+        localRevealRound = 0; // 重置對撞鎖
+        
+        const round = data.round;
+        const qBag = data.qBag || rawQuestions;
+        const currentQ = qBag[(round - 1) % qBag.length];
+        
+        // 奇數局 P1 主角、偶數局 P2 主角
+        const isP1Protagonist = (round % 2 === 1);
+        const amIProtagonist = (myRole === 'P1' && isP1Protagonist) || (myRole === 'P2' && !isP1Protagonist);
+        const proName = isP1Protagonist ? data.p1.name : data.p2.name;
+        const preName = isP1Protagonist ? data.p2.name : data.p1.name;
+
+        // 🎯 專屬橫幅 & 標題更新
+        const banner = document.getElementById('protagonist-banner');
+        if (amIProtagonist) {
+            banner.className = "protagonist-banner banner-me-protagonist";
+            banner.innerHTML = `🎯 輪到你了！你是本題主角：【${myName}】<br><span style="font-size:14px; font-weight:normal;">請依照真實心聲作答，看看隊友懂不懂你。</span>`;
+            document.getElementById('label-my-task').innerHTML = `【我的任務】<br><span class="sub-desc">我真實會怎麼做？</span>`;
+            document.getElementById('label-partner-task').innerHTML = `【隊友狀態】<br><span class="sub-desc">${preName} 正在猜測你的反應...</span>`;
+        } else {
+            banner.className = "protagonist-banner banner-me-predictor";
+            banner.innerHTML = `🔮 默契考驗！本題主角是：【${proName}】<br><span style="font-size:14px; font-weight:normal;">請猜猜「${proName}」在現實中會選哪一項？</span>`;
+            document.getElementById('label-my-task').innerHTML = `【我的任務】<br><span class="sub-desc">我猜「${proName}」會選哪一項？</span>`;
+            document.getElementById('label-partner-task').innerHTML = `【隊友狀態】<br><span class="sub-desc">${proName} 正在選擇真實心聲...</span>`;
+        }
+
+        document.getElementById('q-category').innerText = currentQ.category;
+        document.getElementById('q-text').innerText = currentQ.text;
+
+        // 狀態同步
+        const myReady = data[myRole.toLowerCase()]?.ready;
+        const partnerReady = data[myRole === 'P1' ? 'p2' : 'p1']?.ready;
+
+        // 渲染隊友狀態
+        const pTag = document.getElementById('partner-status-box');
+        if (partnerReady) {
+            pTag.className = "status-card status-ready";
+            pTag.innerHTML = `🔒 隊友已鎖定<br><span style="font-size:12px; font-weight:normal;">等待你的決定...</span>`;
+        } else {
+            pTag.className = "status-card status-waiting";
+            pTag.innerHTML = `⏳ 隊友思考中<br><span style="font-size:12px; font-weight:normal;">尚未送出答案</span>`;
+        }
+
+        // 渲染我的按鈕
+        const myContainer = document.getElementById('my-buttons');
+        if (!myReady) {
+            myContainer.innerHTML = '';
+            const opts = [{t:'red', txt:currentQ.red}, {t:'gray', txt:currentQ.gray}, {t:'gold', txt:currentQ.gold}].sort(()=>Math.random()-0.5);
+            opts.forEach(opt => {
+                let btn = document.createElement('button');
+                btn.className = 'btn-choice'; btn.innerText = opt.text;
+                btn.onclick = () => submitChoice(opt.t);
+                myContainer.appendChild(btn);
+            });
+        } else {
+            myContainer.innerHTML = `<button class="btn-choice selected-locked" disabled>🔒 你已完成鎖定！等待隊友...</button>`;
+        }
+    }
+
+    async function submitChoice(type) {
+        const path = myRole === 'P1' ? 'p1' : 'p2';
+        await update(ref(db, `indra_class_rooms/${currentGroupId}/${path}`), { choice: type, ready: true });
+    }
+
+    // 6. 光束對撞與揭曉
+    function handleReveal(data) {
+        if (localRevealRound === data.round) return; // 確保只播一次動畫
+        localRevealRound = data.round;
+
+        const isP1Pro = (data.round % 2 === 1);
+        const realC = isP1Pro ? data.p1.choice : data.p2.choice;
+        const guessC = isP1Pro ? data.p2.choice : data.p1.choice;
+        const isMatch = (realC === guessC);
+        
+        const proName = isP1Pro ? data.p1.name : data.p2.name;
+        const preName = isP1Pro ? data.p2.name : data.p1.name;
+        
+        const activeIdx = (data.round * 3) % nodes.length;
+        spawnParticles(nodes[activeIdx].x, nodes[activeIdx].y, realC, guessC);
+
+        let title = "", desc = "";
+        if (isMatch) {
+            if (realC === 'gold') {
+                title = "✨ 默契真理智！雙金能量共振";
+                desc = `${preName} 完全相信 ${proName} 能用同理心解決問題！真誠與默契激發了巨大的金色連鎖！`;
+                nodes[activeIdx].color = COLOR_GOLD; shootLasers(activeIdx, COLOR_GOLD, 2);
+            } else if (realC === 'red') {
+                title = "🟣 默契真性情！紫金防護罩啟動";
+                desc = `「我就知道你想開罵！」坦誠承認情緒被 ${preName} 完美接納，怒氣化作深紫防護盾，免疫衝突擴散！`;
+                nodes[activeIdx].color = COLOR_PURPLE; nodes[activeIdx].isShielded = true;
+            } else {
+                title = "🔘 默契沉思！深藍水波平息衝突";
+                desc = "兩人都認為當下冷靜裝死才是最佳避風頭策略。成功止血，阻斷了連鎖惡化。";
+                nodes[activeIdx].color = COLOR_GRAY;
+            }
+        } else {
+            if ((realC==='gold' && guessC==='red') || (realC==='red' && guessC==='gold')) {
+                title = "⚡ 紅金撕裂！戳破假面或誤解";
+                desc = `期待與真實心聲猛烈衝突！光束在連線上湮滅，節點淪為死寂灰霧。${proName} 與 ${preName} 想得完全不一樣！`;
+                nodes[activeIdx].color = COLOR_GRAY;
+            } else {
+                title = "🌫️ 思維未對焦！情緒漣漪擾動";
+                desc = `${preName} 沒猜中反應。${proName} 展現的真實面貌讓他感到意外，激起了疑惑的波紋。`;
+                nodes[activeIdx].color = (realC === 'red') ? COLOR_RED : COLOR_GRAY;
+            }
+        }
+
+        document.getElementById('reveal-title').innerText = title;
+        document.getElementById('reveal-desc').innerText = desc;
+        
+        // 延遲顯示面板讓動畫先跑
+        setTimeout(() => {
+            document.getElementById('reveal-box').style.display = 'flex';
+        }, 1200);
+    }
+
+    // 換題 (任何一人點擊都可)
+    document.getElementById('btn-next-round').addEventListener('click', async () => {
+        const snap = await get(roomRef);
+        const data = snap.val();
+        if (data.status !== 'reveal') return;
+
+        const isP1Pro = (data.round % 2 === 1);
+        const isMatch = (isP1Pro ? data.p1.choice === data.p2.choice : data.p2.choice === data.p1.choice);
+        let newMatchCount = data.matchCount + (isMatch ? 1 : 0);
+
+        if (data.round >= TOTAL_ROUNDS) {
+            update(roomRef, { status: 'finished', matchCount: newMatchCount });
+        } else {
+            update(roomRef, {
+                round: data.round + 1, status: 'playing', matchCount: newMatchCount,
+                "p1/ready": false, "p1/choice": null, "p2/ready": false, "p2/choice": null
+            });
+        }
+    });
+
+    // 7. 結算畫面
+    function handleFinish(data) {
+        document.getElementById('gameplay-box').style.display = 'none';
+        document.getElementById('diagnosis-box').style.display = 'block';
+
+        const gCount = nodes.filter(n=>n.color===COLOR_GOLD).length;
+        const pCount = nodes.filter(n=>n.color===COLOR_PURPLE).length;
+        const hr = Math.round(((gCount+pCount)/nodes.length)*100);
+
+        document.getElementById('diag-players').innerText = `${data.p1.name} 與 ${data.p2.name} 的專屬報告`;
+        document.getElementById('diag-match-score').innerText = `${data.matchCount}/${TOTAL_ROUNDS}`;
+        document.getElementById('diag-harmony-score').innerText = `${hr}%`;
+
+        let hl = "", fb = "";
+        if (data.matchCount >= 5 && hr >= 50) {
+            hl = "🏆 澄澈因陀羅（知己知彼的真智囊）"; fb = `太神啦！你們深度了解彼此的極限，能在面對問題時互相支持選擇理智！這是一段能看穿脆弱、帶動彼此前進的黃金友誼。`;
+        } else if (data.matchCount >= 4 && hr < 50) {
+            hl = "🔥 患難死黨（無話不談的真性情）"; fb = `雖然處理事情火氣不小，但最珍貴的是你們對彼此毫不偽裝！你懂他的暴躁，他懂你的委屈，這是一段經得起風浪的革命情感。`;
+        } else if (data.matchCount < 4 && hr >= 50) {
+            hl = "🎭 假面模範生（披著金光的塑膠友誼）"; fb = `有人很常選看似完美的標準答案，但夥伴心裡根本不相信！表面上一團和氣，底下卻充斥防衛。試著在彼此面前展現真實的脆弱吧！`;
+        } else {
+            hl = "🌪️ 思維碰撞隊（互補又驚喜的搭檔）"; fb = `你們的看法截然不同，常常猜不透對方！但正因如此，你們能看見彼此沒注意到的盲點，是彼此生命中最特別的一面鏡子。`;
+        }
+        document.getElementById('diag-headline').innerText = hl;
+        document.getElementById('diag-feedback-text').innerText = fb;
+    }
+
+    document.getElementById('btn-exit-game').addEventListener('click', () => location.reload());
+
+    // 動畫渲染輔助
+    function spawnParticles(x, y, c1, c2) {
+        const m = { red:COLOR_RED, gray:COLOR_GRAY, gold:COLOR_GOLD };
+        for(let i=0; i<45; i++) {
+            let a = Math.random()*Math.PI*2, s = Math.random()*6+3;
+            particles.push({ x:x, y:y, vx:Math.cos(a)*s, vy:Math.sin(a)*s, color:(i%2===0)?m[c1]:m[c2], life:1.0, decay:Math.random()*0.02+0.015 });
+        }
+    }
+    function shootLasers(fromIdx, color, count) {
+        const fromN = nodes[fromIdx];
+        const tgts = nodes.filter((n,i)=>i!==fromIdx && n.color!==COLOR_GOLD).sort(()=>Math.random()-0.5).slice(0, count);
+        tgts.forEach(t => {
+            t.color = COLOR_GOLD;
+            for(let i=0; i<25; i++) {
+                let p = i/25;
+                particles.push({ x:fromN.x+(t.x-fromN.x)*p, y:fromN.y+(t.y-fromN.y)*p, vx:(Math.random()-0.5)*2, vy:(Math.random()-0.5)*2, color:color, life:1.2, decay:0.025 });
+            }
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        
+        ctx.lineWidth=2.5;
+        edges.forEach(e => {
+            const n1=nodes[e[0]], n2=nodes[e[1]];
+            if(n1.color===COLOR_GOLD && n2.color===COLOR_GOLD) ctx.strokeStyle='rgba(251,191,36,0.65)';
+            else if(n1.color===COLOR_PURPLE || n2.color===COLOR_PURPLE) ctx.strokeStyle='rgba(192,132,252,0.55)';
+            else if(n1.color===COLOR_RED || n2.color===COLOR_RED) ctx.strokeStyle='rgba(244,63,94,0.45)';
+            else ctx.strokeStyle='rgba(148,163,184,0.3)';
+            ctx.beginPath(); ctx.moveTo(n1.x,n1.y); ctx.lineTo(n2.x,n2.y); ctx.stroke();
+        });
+
+        for(let i=particles.length-1; i>=0; i--) {
+            let p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.life-=p.decay;
+            if(p.life<=0) { particles.splice(i,1); continue; }
+            ctx.beginPath(); ctx.arc(p.x, p.y, 5*p.life, 0, Math.PI*2);
+            ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=12; ctx.fill(); ctx.shadowBlur=0;
+        }
+
+        const t = Date.now()/200;
+        nodes.forEach((n, idx) => {
+            let r=14;
+            if(n.color===COLOR_RED) r+=Math.sin(t+n.pulse)*2.5;
+            if(n.color===COLOR_GOLD) r+=Math.sin(t*0.5+n.pulse)*1.5;
+
+            // 標示當前作用的節點光環 (僅在遊戲進行中)
+            if(idx === activeNodeIndex && document.getElementById('lobby-overlay').style.display==='none' && document.getElementById('diagnosis-box').style.display==='none') {
+                ctx.beginPath(); ctx.arc(n.x,n.y,r+10,0,Math.PI*2); ctx.strokeStyle='#38bdf8'; ctx.lineWidth=3; ctx.stroke();
+            }
+            if(n.isShielded) {
+                ctx.beginPath(); ctx.arc(n.x,n.y,r+8,0,Math.PI*2); ctx.strokeStyle='#c084fc'; ctx.lineWidth=2.5; ctx.stroke();
+            }
+
+            ctx.beginPath(); ctx.arc(n.x,n.y,r,0,Math.PI*2);
+            ctx.fillStyle=n.color; ctx.shadowColor=n.color; ctx.shadowBlur=18; ctx.fill(); ctx.shadowBlur=0;
+        });
+        requestAnimationFrame(draw);
+    }
+    
+    // 預設渲染大廳背景
+    window.onload = () => { initNetwork(); requestAnimationFrame(draw); };
+</script>
+
+</body>
+</html>
