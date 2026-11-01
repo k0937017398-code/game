@@ -551,6 +551,7 @@
     let boardState = [];
     let historyStack = [];
     let stepCount = 0;
+    let hintCount = 0; // 新增：用於記錄提示使用的次數
     let timerInterval = null;
     let secondsElapsed = 0;
     let isPlaying = false;
@@ -651,6 +652,19 @@
         selectedPairs.forEach(p => boardState.push({ type: 'B', text: p.blue }));
 
         stepCount = 0;
+        hintCount = 0; // 新增：開局或重置時清零提示次數
+
+        // 新增：動態設定提示按鈕文字狀態
+        const hintBtn = document.getElementById('hintBtn');
+        if (hintBtn) {
+            if (isPlaying) {
+                hintBtn.innerText = '💡 提示 (剩 2 次)';
+                hintBtn.disabled = false;
+            } else {
+                hintBtn.innerText = '💡 提示';
+            }
+        }
+
         historyStack = [];
         selectedCellIndex = null;
         updateStats();
@@ -775,7 +789,8 @@
     }
 
     function getHint() {
-        if (!isPlaying) return;
+        // 修改：加入次數限制判斷 (hintCount >= 2 即不執行)
+        if (!isPlaying || hintCount >= 2) return; 
         const solution = solveBFS(boardState);
         if (solution && solution.length > 1) {
             const nextState = solution[1];
@@ -788,6 +803,16 @@
                 selectedCellIndex = fromIdx;
                 renderBoard();
                 playSound(600, 0.2);
+                
+                // 新增：扣除提示次數與更新按鈕文字
+                hintCount++;
+                const hintBtn = document.getElementById('hintBtn');
+                if (hintCount >= 2) {
+                    hintBtn.innerText = '💡 提示 (已用盡)';
+                    hintBtn.disabled = true;
+                } else {
+                    hintBtn.innerText = `💡 提示 (剩 ${2 - hintCount} 次)`;
+                }
             }
         }
     }
