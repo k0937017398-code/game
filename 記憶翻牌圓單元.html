@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>幾何記憶大挑戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 鎖死畫面，防止平板/手機上任何滑動與縮放 */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+            overscroll-behavior: none;
+            background-color: #eef2ff; /* Tailwind indigo-50 */
+            font-family: 'Inter', 'Microsoft JhengHei', sans-serif;
+        }
+
+        /* 3D 卡牌翻轉效果 */
+        .card-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+
+        /* 蓋牌狀態 (翻轉 180 度) */
+        .card-container.face-down .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        /* 卡牌正反面基礎設定 */
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* 正面 (文字面) */
+        .card-front {
+            background-color: #ffffff;
+            transform: rotateY(0deg);
+            transition: color 0.3s ease;
+        }
+
+        /* 背面 (Logo面) */
+        .card-back {
+            background: linear-gradient(135deg, #818cf8, #6366f1); /* Tailwind indigo-400 to 500 */
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        /* 發光提示動畫 */
+        .glow {
+            box-shadow: 0 0 20px 8px rgba(250, 204, 21, 0.9) !important;
+            background-color: #fef08a !important; /* Tailwind yellow-200 */
+            z-index: 10;
+        }
+
+        /* 錯誤搖晃動畫與變色 */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        
+        .text-error {
+            color: #ef4444 !important; /* Tailwind red-500 */
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+            40%, 60% { transform: translate3d(6px, 0, 0); }
+        }
+
+        /* 彈出視窗動畫 */
+        .modal-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center relative text-indigo-900">
+
+    <!-- 1. 開局大廳 (Lobby Screen) -->
+    <div id="lobby-screen" class="flex flex-col items-center justify-center w-full h-full p-6 absolute inset-0 z-20 bg-indigo-50">
+        <div class="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full flex flex-col items-center text-center">
+            <div class="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-4">
+                <span class="text-indigo-600 text-4xl font-serif italic">π</span>
+            </div>
+            <h1 class="text-3xl font-extrabold text-indigo-900 mb-6">幾何記憶大挑戰</h1>
+            
+            <div class="w-full mb-6">
+                <label for="player-name" class="block text-left text-sm font-bold text-indigo-700 mb-2 pl-2">玩家姓名：</label>
+                <input type="text" id="player-name" placeholder="請輸入你的名字" class="w-full px-5 py-4 rounded-xl border-2 border-indigo-200 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-lg transition text-center shadow-inner" autocomplete="off">
+            </div>
+
+            <div class="w-full bg-indigo-50 rounded-xl p-5 mb-8 text-left shadow-inner">
+                <h2 class="font-bold text-indigo-800 mb-3 flex items-center"><i class="fa-solid fa-scroll mr-2"></i> 遊戲規則</h2>
+                <ul class="list-decimal pl-5 text-indigo-700 space-y-2 text-sm leading-relaxed font-medium">
+                    <li>你有 <strong class="text-red-500">5 顆愛心</strong> 生命值。</li>
+                    <li>記住發亮的文字順序。</li>
+                    <li>卡牌蓋上後，憑記憶依序點擊。</li>
+                    <li>點錯會扣愛心，若愛心歸零，<strong class="text-red-500">將從第 1 關重新開始</strong>。</li>
+                </ul>
+            </div>
+
+            <button onclick="startGame()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg transition transform hover:scale-105 hover:-translate-y-1 text-xl">
+                開始遊戲
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. 遊戲主畫面 (Game Screen) -->
+    <div id="game-screen" class="flex flex-col items-center justify-start w-full h-full hidden absolute inset-0 z-10 pt-8 sm:pt-12 pb-4 px-4">
+        
+        <!-- 頂部資訊列 -->
+        <div class="w-full max-w-lg flex justify-between items-center mb-6 px-4">
+            <div class="flex flex-col">
+                <span id="display-name" class="text-sm font-bold text-indigo-500">玩家</span>
+                <span id="level-display" class="text-2xl font-black text-indigo-800">Lv 1</span>
+            </div>
+            <div id="hearts-display" class="flex items-center drop-shadow-sm">
+                <!-- Hearts will be injected here -->
+            </div>
+        </div>
+
+        <!-- 卡牌網格區域 (完美正方形，限制最大高度防止溢出) -->
+        <div class="flex-1 w-full flex items-center justify-center">
+            <div id="grid-container" class="grid grid-cols-4 grid-rows-4 gap-2 sm:gap-3" style="width: min(92vw, 55vh); height: min(92vw, 55vh);">
+                <!-- Cards will be injected here -->
+            </div>
+        </div>
+        
+        <!-- 底部保留一點空間給平板 UI -->
+        <div class="h-10 w-full"></div>
+    </div>
+
+    <!-- 3. 彈出視窗 (Overlays) -->
+    <div id="overlay-container" class="hidden absolute inset-0 bg-indigo-900/60 backdrop-blur-sm z-30 flex items-center justify-center p-4">
+        
+        <!-- 過關/通關慶祝 -->
+        <div id="celebration-modal" class="hidden bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform">
+            <div class="text-6xl mb-4">🎉</div>
+            <h2 id="celebration-text" class="text-2xl font-bold text-indigo-900 mb-4 leading-tight"></h2>
+            
+            <!-- 顯示剩餘生命，增加學生危機感 -->
+            <div id="remaining-lives-text" class="text-xl font-bold text-red-500 mb-6 flex justify-center items-center">
+                <!-- Injected via JS -->
+            </div>
+
+            <button id="next-level-btn" onclick="nextLevel()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:scale-105 text-lg">
+                下一關
+            </button>
+            <button id="home-btn" onclick="returnToLobby()" class="hidden w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:scale-105 text-lg">
+                回首頁
+            </button>
+        </div>
+
+        <!-- 遊戲結束 (Game Over) -->
+        <div id="game-over-modal" class="hidden bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform">
+            <div class="text-6xl mb-4">💔</div>
+            <h2 class="text-2xl font-bold text-indigo-900 mb-2 leading-tight">挑戰失敗</h2>
+            <p class="text-indigo-600 font-medium mb-6">愛心已耗盡，請從第 1 關重新開始！</p>
+            <button onclick="restartGame()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl shadow-lg transition transform hover:scale-105 text-lg">
+                重新挑戰
+            </button>
+        </div>
+    </div>
+
+    <!-- 遊戲邏輯 JavaScript -->
+    <script>
+        // === 遊戲設定與資料 ===
+        const levelsData = [
+            "圓周率",
+            "畢氏定理",
+            "等弧對等弦",
+            "圓內接四邊形",
+            "大弦對小弦心距",
+            "同弧所對的圓周角",
+            "圓內接四邊形對角互補",
+            "圓周角是圓心角的一半"
+        ];
+        
+        const distractorsPool = ["加","減","乘","除","根","號","幾","何","點","線","面","角","體","積"];
+        const MAX_HEARTS = 5; // ★ 更新為 5 顆心
+
+        // === 遊戲狀態 ===
+        let playerName = "";
+        let currentLevel = 0;
+        let hearts = MAX_HEARTS;
+        let currentStep = 0; 
+        let isAnimating = false; 
+        let gridData = []; 
+
+        // === DOM 元素參考 ===
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const overlayContainer = document.getElementById('overlay-container');
+        const celebrationModal = document.getElementById('celebration-modal');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const gridContainer = document.getElementById('grid-container');
+        const heartsDisplay = document.getElementById('hearts-display');
+        const levelDisplay = document.getElementById('level-display');
+        const displayName = document.getElementById('display-name');
+        const celebrationText = document.getElementById('celebration-text');
+        const remainingLivesText = document.getElementById('remaining-lives-text');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const homeBtn = document.getElementById('home-btn');
+
+        // === 核心功能 ===
+
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        function startGame() {
+            const inputName = document.getElementById('player-name').value.trim();
+            playerName = inputName === "" ? "挑戰者" : inputName;
+            
+            lobbyScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            displayName.innerText = playerName;
+            
+            currentLevel = 0;
+            resetGameStats();
+            loadLevel();
+        }
+
+        function resetGameStats() {
+            hearts = MAX_HEARTS;
+            updateHeartsDisplay();
+        }
+
+        function updateHeartsDisplay() {
+            heartsDisplay.innerHTML = '';
+            for (let i = 0; i < MAX_HEARTS; i++) {
+                if (i < hearts) {
+                    heartsDisplay.innerHTML += `<i class="fa-solid fa-heart text-red-500 mx-0.5 text-xl sm:text-2xl transform transition scale-110"></i>`;
+                } else {
+                    // 破碎/空心的愛心
+                    heartsDisplay.innerHTML += `<i class="fa-solid fa-heart text-gray-300 mx-0.5 text-xl sm:text-2xl transform scale-90 opacity-50"></i>`;
+                }
+            }
+        }
+
+        function loadLevel() {
+            levelDisplay.innerText = `Lv ${currentLevel + 1}`;
+            gridContainer.innerHTML = '';
+            gridData = [];
+            currentStep = 0;
+
+            const targetWord = levelsData[currentLevel];
+            const targetChars = targetWord.split('');
+            
+            let charsToPlace = [];
+            
+            targetChars.forEach((char, index) => {
+                charsToPlace.push({
+                    char: char,
+                    isTarget: true,
+                    targetIndex: index
+                });
+            });
+
+            let distractorsCopy = [...distractorsPool];
+            distractorsCopy.sort(() => Math.random() - 0.5); 
+            
+            while (charsToPlace.length < 16) {
+                charsToPlace.push({
+                    char: distractorsCopy[(charsToPlace.length) % distractorsCopy.length],
+                    isTarget: false,
+                    targetIndex: -1
+                });
+            }
+
+            charsToPlace.sort(() => Math.random() - 0.5);
+
+            charsToPlace.forEach((data, index) => {
+                const cardOuter = document.createElement('div');
+                cardOuter.className = 'card-container cursor-pointer';
+                
+                const textStyle = data.isTarget 
+                    ? 'text-indigo-900 font-extrabold text-3xl sm:text-4xl' 
+                    : 'text-indigo-300/70 font-normal text-3xl sm:text-4xl';
+
+                cardOuter.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-front ${textStyle}">
+                            ${data.char}
+                        </div>
+                        <div class="card-back">
+                            <span class="font-serif italic text-4xl sm:text-5xl opacity-90">π</span>
+                        </div>
+                    </div>
+                `;
+
+                cardOuter.addEventListener('click', () => handleCardClick(cardOuter, data));
+                gridContainer.appendChild(cardOuter);
+                data.element = cardOuter;
+                gridData.push(data);
+            });
+
+            setTimeout(playSequence, 500);
+        }
+
+        async function playSequence() {
+            isAnimating = true; 
+
+            let needsWait = false;
+            gridData.forEach(data => {
+                if (data.element.classList.contains('face-down')) {
+                    data.element.classList.remove('face-down');
+                    needsWait = true;
+                }
+            });
+
+            if (needsWait) await delay(600); 
+            await delay(400); 
+
+            const targetSequence = gridData.filter(d => d.isTarget).sort((a, b) => a.targetIndex - b.targetIndex);
+
+            for (let i = 0; i < targetSequence.length; i++) {
+                const frontFace = targetSequence[i].element.querySelector('.card-front');
+                frontFace.classList.add('glow');
+                await delay(800); 
+                frontFace.classList.remove('glow');
+                await delay(200); 
+            }
+
+            await delay(300);
+
+            gridData.forEach(data => {
+                data.element.classList.add('face-down');
+            });
+
+            await delay(600); 
+
+            isAnimating = false; 
+            currentStep = 0;     
+        }
+
+        async function handleCardClick(cardElement, data) {
+            if (isAnimating || !cardElement.classList.contains('face-down')) return;
+
+            cardElement.classList.remove('face-down');
+
+            if (data.isTarget && data.targetIndex === currentStep) {
+                // --- 點擊正確 ---
+                currentStep++;
+                
+                if (currentStep === levelsData[currentLevel].length) {
+                    isAnimating = true; 
+                    await delay(600);
+                    handleLevelClear();
+                }
+            } else {
+                // --- 點擊錯誤 ---
+                isAnimating = true; 
+                
+                const inner = cardElement.querySelector('.card-inner');
+                const front = cardElement.querySelector('.card-front');
+                
+                // 加入搖晃與字體變紅動畫
+                inner.classList.add('shake');
+                front.classList.add('text-error');
+                
+                hearts--;
+                updateHeartsDisplay();
+
+                await delay(500); // 等待動畫結束
+                
+                // 移除錯誤動畫狀態
+                inner.classList.remove('shake');
+                front.classList.remove('text-error');
+                await delay(300);
+
+                if (hearts <= 0) {
+                    showGameOver();
+                } else {
+                    // 還有愛心，重新播放提示
+                    playSequence();
+                }
+            }
+        }
+
+        function handleLevelClear() {
+            overlayContainer.classList.remove('hidden');
+            celebrationModal.classList.remove('hidden');
+            celebrationModal.classList.add('modal-fade-in');
+            gameOverModal.classList.add('hidden');
+
+            // ★ 更新顯示剩餘幾顆心的畫面
+            remainingLivesText.innerHTML = '<span class="mr-2 text-gray-700 text-lg">剩餘生命：</span>';
+            for(let i = 0; i < hearts; i++) {
+                remainingLivesText.innerHTML += '<i class="fa-solid fa-heart mx-0.5"></i>';
+            }
+
+            if (currentLevel === levelsData.length - 1) {
+                // 完全通關
+                celebrationText.innerHTML = `恭喜 <span class="text-indigo-600">${playerName}</span><br>完全通關，成為幾何大師！`;
+                nextLevelBtn.classList.add('hidden');
+                homeBtn.classList.remove('hidden');
+            } else {
+                // 單關過關
+                celebrationText.innerHTML = `太棒了，<span class="text-indigo-600">${playerName}</span>！<br>第 ${currentLevel + 1} 關過關！`;
+                nextLevelBtn.classList.remove('hidden');
+                homeBtn.classList.add('hidden');
+            }
+        }
+
+        function showGameOver() {
+            overlayContainer.classList.remove('hidden');
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.classList.add('modal-fade-in');
+            celebrationModal.classList.add('hidden');
+        }
+
+        function nextLevel() {
+            overlayContainer.classList.add('hidden');
+            currentLevel++;
+            loadLevel();
+        }
+
+        function restartGame() {
+            overlayContainer.classList.add('hidden');
+            // ★ 修改這裡：失敗後將從第 0 關 (第一關) 重新開始
+            currentLevel = 0; 
+            resetGameStats();
+            loadLevel(); 
+        }
+
+        function returnToLobby() {
+            overlayContainer.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            lobbyScreen.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

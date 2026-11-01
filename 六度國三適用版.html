@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>會考心態逆轉勝 - 國三衝刺解謎棋</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Noto+Serif+TC:wght@700;900&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f5f0e6;
+            --panel-bg: #fffbf0;
+            --primary-red: #c0392b;
+            --red-grad-start: #e74c3c;
+            --red-grad-end: #962d22;
+            --primary-blue: #2980b9;
+            --blue-grad-start: #3498db;
+            --blue-grad-end: #1b4f72;
+            --wood-light: #e6c896;
+            --wood-dark: #b8860b;
+            --wood-border: #8c6239;
+            --text-dark: #3a2e2b;
+            --gold: #d4af37;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#d5c3aa 1px, transparent 1px);
+            background-size: 24px 24px;
+            color: var(--text-dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            overflow-y: auto;
+        }
+
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: var(--panel-bg);
+            border: 3px solid var(--wood-border);
+            border-radius: 20px;
+            box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            position: relative;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            border-bottom: 2px dashed #e0d0b8;
+            padding-bottom: 8px;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+        }
+
+        h1 {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 2.6rem;
+            color: var(--text-dark);
+            letter-spacing: 3px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .subtitle-selector select {
+            font-family: 'Noto Serif TC', serif;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1.5px solid var(--wood-border);
+            background: #fdfaf2;
+            color: var(--text-dark);
+            cursor: pointer;
+            outline: none;
+            font-size: 0.95rem;
+        }
+
+        .rules-bar {
+            background: #ede3d1;
+            border-left: 4px solid var(--wood-dark);
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            color: #524636;
+        }
+
+        .selection-section {
+            background: #f8f2e6;
+            border: 1.5px dashed var(--wood-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 120px;
+        }
+
+        .section-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #5a4028;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pair-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .pair-card {
+            flex: 1 1 calc(33.333% - 12px);
+            min-width: 170px;
+            background: #ffffff;
+            border: 2.5px solid #ddd3c1;
+            border-radius: 12px;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+            min-height: 88px;
+        }
+
+        .pair-card:active {
+            transform: scale(0.97);
+        }
+
+        .pair-card.selected {
+            background: #fffdf5;
+            border-color: var(--wood-dark);
+            box-shadow: 0 0 0 3px var(--gold);
+        }
+
+        .pair-card .badge {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: transparent;
+        }
+
+        .pair-card.selected .badge {
+            background: var(--gold);
+            border-color: #b8860b;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .pair-pieces {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* 小棋子內部字體美化與防溢出修正 */
+        .mini-piece {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 900;
+            font-size: 0.82rem;
+            line-height: 1.1;
+            text-align: center;
+            padding: 4px;
+            word-break: break-all;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.25), inset 0 2px 3px rgba(255,255,255,0.4);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+        }
+
+        .mini-piece.red {
+            background: radial-gradient(circle at 35% 35%, var(--red-grad-start), var(--red-grad-end));
+            border: 2px solid #721c24;
+        }
+
+        .mini-piece.blue {
+            background: radial-gradient(circle at 35% 35%, var(--blue-grad-start), var(--blue-grad-end));
+            border: 2px solid #1b4f72;
+        }
+
+        .vs-text {
+            font-size: 0.85rem;
+            color: #777;
+            font-weight: bold;
+        }
+
+        .board-container {
+            position: relative;
+            background: linear-gradient(135deg, #e0d0b8, #c8b293);
+            border: 10px solid #8c6239;
+            border-radius: 16px;
+            padding: 20px 8px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.15);
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .board {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+            padding: 4px;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .empty-hint {
+            color: #6d5843;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+        }
+
+        .cell {
+            width: clamp(38px, 6.2vw, 66px);
+            height: clamp(38px, 6.2vw, 66px);
+            background: #fdfaf2;
+            border: 2px solid #a67c52;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: all 0.25s ease;
+            flex-shrink: 0;
+        }
+
+        .cell.highlight {
+            background: #e8f8f5;
+            border-color: #2ec4b6;
+            box-shadow: inset 0 0 10px #2ec4b6;
+        }
+
+        /* 棋盤實體棋子：精準 2x2 字體美化防溢出 */
+        .piece {
+            width: clamp(34px, 5.5vw, 58px);
+            height: clamp(34px, 5.5vw, 58px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: 'Noto Sans TC', sans-serif;
+            font-size: clamp(0.68rem, 1.15vw, 0.85rem);
+            font-weight: 900;
+            line-height: 1.05;
+            text-align: center;
+            padding: 3px;
+            cursor: pointer;
+            position: absolute;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3), inset 0 3px 4px rgba(255,255,255,0.4);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+            word-break: break-all;
+        }
+
+        .piece.red {
+            background: radial-gradient(circle at 35% 35%, var(--red-grad-start), var(--red-grad-end));
+            border: 2px solid #641e16;
+        }
+
+        .piece.blue {
+            background: radial-gradient(circle at 35% 35%, var(--blue-grad-start), var(--blue-grad-end));
+            border: 2px solid #154360;
+        }
+
+        .piece.selected-piece {
+            animation: pulse 1.2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 5px 0 rgba(0,0,0,0.3), 0 0 0 0 rgba(212,175,55,0.7); }
+            100% { transform: scale(1.08); box-shadow: 0 7px 0 rgba(0,0,0,0.3), 0 0 0 8px rgba(212,175,55,0); }
+        }
+
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: #efe6d5;
+            padding: 12px 18px;
+            border-radius: 12px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 18px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Noto Serif TC', serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+        }
+
+        .btn-start-game {
+            background: linear-gradient(135deg, #d4af37, #aa820a);
+            color: #fff;
+            padding: 10px 22px;
+            font-size: 1.05rem;
+            border-radius: 20px;
+        }
+
+        .btn-start-game:hover:not(:disabled) {
+            background: linear-gradient(135deg, #e5c158, #c4981d);
+            transform: scale(1.03);
+        }
+
+        .btn-start-game:disabled {
+            background: #ccc;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-action { background: #8c6239; color: #fff; }
+        .btn-action:hover:not(:disabled) { background: #704d2b; }
+        .btn-action:disabled { background: #bbb; cursor: not-allowed; }
+
+        .btn-reset { background: #ad3b27; color: #fff; }
+        .btn-reset:hover { background: #8f2d1c; }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: #fffdf8;
+            border: 3px solid var(--gold);
+            border-radius: 16px;
+            padding: 26px;
+            max-width: 440px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: scale(0.85);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-backdrop.active .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-card h2 {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 2.3rem;
+            color: var(--gold);
+            margin-bottom: 8px;
+        }
+
+        .quote-box {
+            background: #f7f2e7;
+            border-left: 3px solid var(--gold);
+            padding: 10px 12px;
+            margin: 14px 0;
+            font-size: 0.95rem;
+            color: #555;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 650px) {
+            .pair-card { flex: 1 1 calc(50% - 10px); min-width: 130px; }
+            .mini-piece { width: 46px; height: 46px; font-size: 0.72rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="title-group">
+            <h1>會考心態逆轉勝</h1>
+            <div class="subtitle-selector">
+                <select id="subtitleSelect">
+                    <option value="突破盲點，迎向會考勝利">突破盲點，迎向會考勝利</option>
+                    <option value="轉化焦慮為動力，穩扎穩打">轉化焦慮為動力，穩扎穩打</option>
+                    <option value="每一步前進，都是最好的自己">每一步前進，都是最好的自己</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="rules-bar">
+        <strong>遊戲規則：</strong> 一次移動一子（前進一格或跳過一子）。棋子<strong>只能向前不能後退</strong>。<br>
+        <strong>目標：</strong> 將左側紅色的「盲點壓力」全數移至右岸，右側藍色的「突破對策」全數移至左岸。
+    </div>
+
+    <!-- 挑選對治棋子區塊 -->
+    <div class="selection-section">
+        <div class="section-title">
+            <span>選擇欲擺放對治的策略（最少須選擇 3 對）：</span>
+            <span id="selectedCountText" style="font-size:0.9rem; color:#888;">已選取 0 / 6 對</span>
+        </div>
+        <div class="pair-grid" id="pairGrid"></div>
+    </div>
+
+    <!-- 棋盤區域 -->
+    <div class="board-container">
+        <div class="board" id="board"></div>
+    </div>
+
+    <!-- 資訊與控制按鈕 -->
+    <div class="controls-bar">
+        <div class="stats">
+            <div>步數: <span id="stepCount" style="color:var(--primary-red)">0</span></div>
+            <div>最少理論步數: <span id="minSteps">0</span></div>
+            <div>時間: <span id="timer">00:00</span></div>
+        </div>
+        <div class="action-btns">
+            <button class="btn btn-start-game" id="startBtn" disabled>▶ 開始挑戰 (請選3對)</button>
+            <button class="btn btn-action" id="hintBtn" disabled>💡 提示</button>
+            <button class="btn btn-action" id="undoBtn" disabled>↩ 悔棋</button>
+            <button class="btn btn-reset" id="resetBtn">🔄 重置</button>
+        </div>
+    </div>
+</div>
+
+<!-- 勝利慶祝 Modal -->
+<div class="modal-backdrop" id="victoryModal">
+    <div class="modal-card">
+        <h2>逆轉圓滿！</h2>
+        <p>太棒了！你成功將挑戰與壓力轉化為成長的動力！</p>
+        <div class="quote-box" id="quoteText">
+            「每一次的轉念與突破，都是為了成就更好的自己。會考加油，你一定能抵達理想的彼岸！」
+        </div>
+        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;" id="victoryStats">
+            總步數：0 步 | 用時：00:00
+        </p>
+        <button class="btn-start-game" style="padding:8px 24px; font-size:1rem;" id="closeVictoryBtn">再次挑戰</button>
+    </div>
+</div>
+
+<!-- 死局 Modal -->
+<div class="modal-backdrop" id="deadlockModal">
+    <div class="modal-card" style="border-color: var(--primary-red);">
+        <h2 style="color: var(--primary-red);">卡關囉</h2>
+        <p>當前局勢暫時無路可走！</p>
+        <div class="quote-box">
+            「行到水窮處，坐看雲起時。退一步海闊天空，不妨點擊悔棋或重新佈局再試一次！」
+        </div>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:15px;">
+            <button class="btn btn-action" id="deadlockUndoBtn">↩ 悔棋一步</button>
+            <button class="btn btn-reset" id="deadlockResetBtn">🔄 重新挑戰</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ALL_PAIRS = [
+        { id: 1, red: "盲目刷題", blue: "精準檢討" },
+        { id: 2, red: "考前焦慮", blue: "穩定呼吸" },
+        { id: 3, red: "旁人眼光", blue: "堅定步伐" },
+        { id: 4, red: "遇到挫折", blue: "反敗為勝" },
+        { id: 5, red: "深夜熬夜", blue: "高效專注" },
+        { id: 6, red: "自我設限", blue: "無限可能" }
+    ];
+
+    const ENCOURAGEMENT_QUOTES = [
+        "「每一次的轉念與突破，都是為了成就更好的自己。會考加油，你一定能抵達理想的彼岸！」",
+        "「時間一直向前，過去的失誤無法重來，但你可以決定接下來的每一步怎麼走！」",
+        "「面對挑戰最好的方法就是迎難而上，保持專注，你比自己想像的更優秀！」",
+        "「穩扎穩打，步步為營。堅持到最後的人，就是贏家！」"
+    ];
+
+    let selectedPairIds = [];
+    let boardState = [];
+    let historyStack = [];
+    let stepCount = 0;
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isPlaying = false;
+    let selectedCellIndex = null;
+
+    let audioCtx = null;
+    function playSound(freq, duration, type='sine') {
+        try {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e){}
+    }
+
+    // 將四個字斷句格式化，確保 2x2 美觀排列
+    function formatText(str) {
+        if (str.length === 4) {
+            return str.substring(0, 2) + '<br>' + str.substring(2);
+        }
+        return str;
+    }
+
+    function renderPairCards() {
+        const grid = document.getElementById('pairGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        ALL_PAIRS.forEach(pair => {
+            const isSelected = selectedPairIds.includes(pair.id);
+            const card = document.createElement('div');
+            card.className = `pair-card ${isSelected ? 'selected' : ''}`;
+            card.innerHTML = `
+                <div class="badge">✓</div>
+                <div class="pair-pieces">
+                    <div class="mini-piece red">${formatText(pair.red)}</div>
+                    <span class="vs-text">對治</span>
+                    <div class="mini-piece blue">${formatText(pair.blue)}</div>
+                </div>
+            `;
+            card.onclick = () => togglePair(pair.id);
+            grid.appendChild(card);
+        });
+
+        const count = selectedPairIds.length;
+        const countText = document.getElementById('selectedCountText');
+        if (countText) countText.innerText = `已選取 ${count} / 6 對`;
+
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            if (count >= 3) {
+                startBtn.disabled = false;
+                startBtn.innerText = isPlaying ? "🔄 重新開局" : "▶ 開始挑戰";
+            } else {
+                startBtn.disabled = true;
+                startBtn.innerText = `▶ 開始挑戰 (還差 ${3 - count} 對)`;
+            }
+        }
+    }
+
+    function togglePair(id) {
+        if (selectedPairIds.includes(id)) {
+            selectedPairIds = selectedPairIds.filter(pid => pid !== id);
+        } else {
+            selectedPairIds.push(id);
+            selectedPairIds.sort((a,b) => a - b);
+        }
+
+        stopTimer();
+        isPlaying = false;
+        if (document.getElementById('hintBtn')) document.getElementById('hintBtn').disabled = true;
+        if (document.getElementById('undoBtn')) document.getElementById('undoBtn').disabled = true;
+
+        renderPairCards();
+        previewBoard();
+    }
+
+    function previewBoard() {
+        const selectedPairs = ALL_PAIRS.filter(p => selectedPairIds.includes(p.id));
+        boardState = [];
+
+        if (selectedPairs.length === 0) {
+            renderBoard();
+            updateStats();
+            return;
+        }
+
+        selectedPairs.forEach(p => boardState.push({ type: 'R', text: p.red }));
+        boardState.push({ type: 'E', text: '' });
+        selectedPairs.forEach(p => boardState.push({ type: 'B', text: p.blue }));
+
+        stepCount = 0;
+        historyStack = [];
+        selectedCellIndex = null;
+        updateStats();
+        renderBoard();
+    }
+
+    function renderBoard() {
+        const boardEl = document.getElementById('board');
+        if (!boardEl) return;
+        boardEl.innerHTML = '';
+
+        if (boardState.length === 0) {
+            boardEl.innerHTML = '<div class="empty-hint">請由上方挑選至少 3 對策略擺入棋盤</div>';
+            return;
+        }
+
+        boardState.forEach((cell, idx) => {
+            const cellEl = document.createElement('div');
+            cellEl.className = 'cell';
+
+            if (isPlaying && selectedCellIndex !== null) {
+                const validMoves = getValidMoves(selectedCellIndex);
+                if (validMoves.includes(idx)) {
+                    cellEl.classList.add('highlight');
+                }
+            }
+
+            cellEl.onclick = () => handleCellClick(idx);
+
+            if (cell.type !== 'E') {
+                const pieceEl = document.createElement('div');
+                pieceEl.className = `piece ${cell.type === 'R' ? 'red' : 'blue'}`;
+                pieceEl.innerHTML = formatText(cell.text);
+                if (selectedCellIndex === idx) {
+                    pieceEl.classList.add('selected-piece');
+                }
+                cellEl.appendChild(pieceEl);
+            }
+
+            boardEl.appendChild(cellEl);
+        });
+    }
+
+    function getValidMoves(fromIdx) {
+        const moves = [];
+        const piece = boardState[fromIdx];
+        if (!piece || piece.type === 'E') return moves;
+
+        if (piece.type === 'R') {
+            if (fromIdx + 1 < boardState.length && boardState[fromIdx + 1].type === 'E') moves.push(fromIdx + 1);
+            else if (fromIdx + 2 < boardState.length && boardState[fromIdx + 2].type === 'E') moves.push(fromIdx + 2);
+        } else if (piece.type === 'B') {
+            if (fromIdx - 1 >= 0 && boardState[fromIdx - 1].type === 'E') moves.push(fromIdx - 1);
+            else if (fromIdx - 2 >= 0 && boardState[fromIdx - 2].type === 'E') moves.push(fromIdx - 2);
+        }
+        return moves;
+    }
+
+    function handleCellClick(idx) {
+        if (!isPlaying) return;
+
+        if (selectedCellIndex === idx) {
+            selectedCellIndex = null;
+            renderBoard();
+            return;
+        }
+
+        if (selectedCellIndex !== null) {
+            const validMoves = getValidMoves(selectedCellIndex);
+            if (validMoves.includes(idx)) {
+                executeMove(selectedCellIndex, idx);
+                selectedCellIndex = null;
+                return;
+            }
+        }
+
+        if (boardState[idx].type !== 'E') {
+            selectedCellIndex = idx;
+            playSound(300, 0.08);
+            renderBoard();
+        }
+    }
+
+    function executeMove(from, to) {
+        historyStack.push(JSON.parse(JSON.stringify(boardState)));
+        boardState[to] = boardState[from];
+        boardState[from] = { type: 'E', text: '' };
+
+        stepCount++;
+        playSound(450, 0.12);
+        updateStats();
+        renderBoard();
+        
+        if (!checkVictory()) {
+            checkDeadlock();
+        }
+    }
+
+    function checkDeadlock() {
+        let hasAnyMove = false;
+        for (let i = 0; i < boardState.length; i++) {
+            if (boardState[i].type !== 'E' && getValidMoves(i).length > 0) {
+                hasAnyMove = true;
+                break;
+            }
+        }
+
+        if (!hasAnyMove) {
+            playSound(200, 0.3, 'sawtooth');
+            document.getElementById('deadlockModal').classList.add('active');
+        }
+    }
+
+    function undoMove() {
+        if (!isPlaying || historyStack.length === 0) return;
+        boardState = historyStack.pop();
+        stepCount--;
+        selectedCellIndex = null;
+        playSound(250, 0.1);
+        updateStats();
+        renderBoard();
+    }
+
+    function getHint() {
+        if (!isPlaying) return;
+        const solution = solveBFS(boardState);
+        if (solution && solution.length > 1) {
+            const nextState = solution[1];
+            let fromIdx = -1, toIdx = -1;
+            for (let i = 0; i < boardState.length; i++) {
+                if (boardState[i].type !== 'E' && nextState[i].type === 'E') fromIdx = i;
+                if (boardState[i].type === 'E' && nextState[i].type !== 'E') toIdx = i;
+            }
+            if (fromIdx !== -1 && toIdx !== -1) {
+                selectedCellIndex = fromIdx;
+                renderBoard();
+                playSound(600, 0.2);
+            }
+        }
+    }
+
+    function solveBFS(startState) {
+        const queue = [[startState]];
+        const visited = new Set();
+        visited.add(serializeState(startState));
+
+        while (queue.length > 0) {
+            const path = queue.shift();
+            const curr = path[path.length - 1];
+
+            if (isWinningState(curr)) return path;
+
+            const nextStates = getNextPossibleStates(curr);
+            for (let ns of nextStates) {
+                const key = serializeState(ns);
+                if (!visited.has(key)) {
+                    visited.add(key);
+                    queue.push([...path, ns]);
+                }
+            }
+        }
+        return null;
+    }
+
+    function serializeState(state) {
+        return state.map(s => s.type).join('');
+    }
+
+    function getNextPossibleStates(state) {
+        const nexts = [];
+        for (let i = 0; i < state.length; i++) {
+            if (state[i].type === 'R') {
+                if (i + 1 < state.length && state[i+1].type === 'E') nexts.push(swapState(state, i, i+1));
+                if (i + 2 < state.length && state[i+2].type === 'E') nexts.push(swapState(state, i, i+2));
+            } else if (state[i].type === 'B') {
+                if (i - 1 >= 0 && state[i-1].type === 'E') nexts.push(swapState(state, i, i-1));
+                if (i - 2 >= 0 && state[i-2].type === 'E') nexts.push(swapState(state, i, i-2));
+            }
+        }
+        return nexts;
+    }
+
+    function swapState(state, i, j) {
+        const copy = JSON.parse(JSON.stringify(state));
+        const temp = copy[i];
+        copy[i] = copy[j];
+        copy[j] = temp;
+        return copy;
+    }
+
+    function isWinningState(state) {
+        const N = selectedPairIds.length;
+        if (N === 0) return false;
+        for (let i = 0; i < N; i++) if (state[i].type !== 'B') return false;
+        if (state[N].type !== 'E') return false;
+        for (let i = N + 1; i < 2 * N + 1; i++) if (state[i].type !== 'R') return false;
+        return true;
+    }
+
+    function checkVictory() {
+        if (isWinningState(boardState)) {
+            stopTimer();
+            isPlaying = false;
+            document.getElementById('hintBtn').disabled = true;
+            document.getElementById('undoBtn').disabled = true;
+            
+            playSound(523, 0.2);
+            setTimeout(() => playSound(659, 0.2), 150);
+            setTimeout(() => playSound(783, 0.4), 300);
+
+            const randomQuote = ENCOURAGEMENT_QUOTES[Math.floor(Math.random() * ENCOURAGEMENT_QUOTES.length)];
+            document.getElementById('quoteText').innerText = randomQuote;
+            document.getElementById('victoryStats').innerText = `總步數：${stepCount} 步 | 用時：${formatTime(secondsElapsed)}`;
+            document.getElementById('victoryModal').classList.add('active');
+            return true;
+        }
+        return false;
+    }
+
+    function updateStats() {
+        const stepEl = document.getElementById('stepCount');
+        if (stepEl) stepEl.innerText = stepCount;
+        const N = selectedPairIds.length;
+        const minEl = document.getElementById('minSteps');
+        if (minEl) minEl.innerText = N > 0 ? N * (N + 2) : 0;
+    }
+
+    function startTimer() {
+        stopTimer();
+        secondsElapsed = 0;
+        document.getElementById('timer').innerText = '00:00';
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            document.getElementById('timer').innerText = formatTime(secondsElapsed);
+        }, 1000);
+    }
+
+    function stopTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+    }
+
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function bindControls() {
+        renderPairCards();
+        previewBoard();
+
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            startBtn.onclick = () => {
+                if (selectedPairIds.length < 3) return;
+                isPlaying = true;
+                document.getElementById('hintBtn').disabled = false;
+                document.getElementById('undoBtn').disabled = false;
+                previewBoard();
+                startTimer();
+                renderPairCards();
+            };
+        }
+
+        const resetBtn = document.getElementById('resetBtn');
+        if (resetBtn) {
+            resetBtn.onclick = () => {
+                stopTimer();
+                isPlaying = false;
+                selectedPairIds = [];
+                document.getElementById('hintBtn').disabled = true;
+                document.getElementById('undoBtn').disabled = true;
+                document.getElementById('timer').innerText = '00:00';
+                renderPairCards();
+                previewBoard();
+            };
+        }
+
+        document.getElementById('undoBtn').onclick = undoMove;
+        document.getElementById('hintBtn').onclick = getHint;
+
+        document.getElementById('closeVictoryBtn').onclick = () => {
+            document.getElementById('victoryModal').classList.remove('active');
+            stopTimer();
+            isPlaying = false;
+            renderPairCards();
+            previewBoard();
+        };
+
+        document.getElementById('deadlockUndoBtn').onclick = () => {
+            document.getElementById('deadlockModal').classList.remove('active');
+            undoMove();
+        };
+
+        document.getElementById('deadlockResetBtn').onclick = () => {
+            document.getElementById('deadlockModal').classList.remove('active');
+            previewBoard();
+            if (isPlaying) startTimer();
+        };
+    }
+
+    renderPairCards();
+    previewBoard();
+    window.addEventListener('DOMContentLoaded', bindControls);
+    window.addEventListener('load', bindControls);
+</script>
+</body>
+</html>

@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>魔數機器 - 函數奧秘探索遊戲</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary-bg: #0b0f19;
+      --card-bg: rgba(20, 27, 45, 0.88);
+      --accent-color: #38bdf8;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Fredoka', 'Noto Sans TC', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 60%, #080c14 100%);
+      color: var(--text-main);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      height: 60px;
+      padding: 0 1.5rem;
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 2px solid rgba(56, 189, 248, 0.25);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #38bdf8;
+      text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+    }
+
+    .logo i {
+      font-size: 1.7rem;
+      color: #fbbf24;
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-robots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .robot-tab {
+      padding: 6px 14px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-sub);
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .robot-tab:hover {
+      background: #334155;
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    .robot-tab.active {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      border-color: #7dd3fc;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+    }
+
+    /* 鎖定關卡樣式 */
+    .robot-tab.locked {
+      opacity: 0.45;
+      cursor: not-allowed;
+      background: rgba(15, 23, 42, 0.4);
+      border-color: rgba(255, 255, 255, 0.05);
+      filter: grayscale(0.8);
+    }
+
+    .robot-tab.locked:hover {
+      transform: none;
+      background: rgba(15, 23, 42, 0.4);
+      color: var(--text-sub);
+    }
+
+    .robot-tab .badge-check {
+      color: #4ade80;
+    }
+
+    .user-tag {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      padding: 6px 14px;
+      border-radius: 20px;
+      color: #38bdf8;
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .game-container {
+      flex: 1;
+      height: calc(100vh - 60px);
+      max-width: 1500px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      grid-template-columns: 340px 1fr 400px; 
+      gap: 1rem;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    .panel-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 1.2rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .panel-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .ball-pool-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .pool-hopper {
+      background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.15), rgba(15, 23, 42, 0.8));
+      border: 2px solid rgba(56, 189, 248, 0.3);
+      border-radius: 18px;
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      align-content: flex-start;
+      position: relative;
+      overflow-y: auto;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    .pool-hopper::before {
+      content: 'ENERGY INPUT HOPPER';
+      position: absolute;
+      bottom: 6px;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      color: rgba(56, 189, 248, 0.4);
+      font-weight: 900;
+    }
+
+    .ball {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.8rem;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      cursor: pointer;
+      box-shadow: inset -4px -6px 12px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.7), 0 8px 16px rgba(0,0,0,0.4);
+      transition: all 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .ball:hover {
+      transform: scale(1.15) translateY(-4px);
+      box-shadow: inset -4px -6px 12px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(255,255,255,0.7), 0 12px 24px rgba(56, 189, 248, 0.5);
+    }
+
+    .ball:active {
+      transform: scale(0.92);
+    }
+
+    .ball-c1 { background: radial-gradient(circle at 32% 32%, #ff8585, #dc2626 60%, #7f1d1d); }
+    .ball-c2 { background: radial-gradient(circle at 32% 32%, #fde047, #d97706 60%, #78350f); }
+    .ball-c3 { background: radial-gradient(circle at 32% 32%, #86efac, #16a34a 60%, #14532d); }
+    .ball-c4 { background: radial-gradient(circle at 32% 32%, #7dd3fc, #0284c7 60%, #0c4a6e); }
+    .ball-c5 { background: radial-gradient(circle at 32% 32%, #e9d5ff, #9333ea 60%, #581c87); }
+    .ball-c6 { background: radial-gradient(circle at 32% 32%, #fbcfe8, #db2777 60%, #831843); }
+
+    .custom-input-box {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .custom-input-box input {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 700;
+      outline: none;
+    }
+
+    .custom-input-box input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56,189,248,0.3);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, #38bdf8, #0284c7);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+
+    .arena-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .robot-display-card {
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.85), rgba(11, 15, 25, 0.95));
+      border-radius: 20px;
+      border: 2px solid rgba(56, 189, 248, 0.2);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .robot-header-info {
+      text-align: center;
+    }
+
+    .robot-name {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #fbbf24;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+    }
+
+    .robot-subtitle {
+      font-size: 1.1rem;
+      color: var(--text-sub);
+    }
+
+    .robot-stage {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      max-height: 380px;
+    }
+
+    .robot-svg-wrapper {
+      width: 320px;
+      height: 330px;
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    }
+
+    .funnel-zone {
+      position: absolute;
+      top: 10px;
+      left: 10%;
+      padding: 8px 14px;
+      border: 2px dashed rgba(251, 191, 36, 0.6);
+      border-radius: 20px;
+      color: #fbbf24;
+      font-size: 1.1rem;
+      font-weight: 800;
+      background: rgba(251, 191, 36, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chute-zone {
+      position: absolute;
+      bottom: 10px;
+      right: 10%;
+      padding: 8px 14px;
+      border: 2px dashed rgba(74, 222, 128, 0.6);
+      border-radius: 20px;
+      color: #4ade80;
+      font-size: 1.1rem;
+      font-weight: 800;
+      background: rgba(74, 222, 128, 0.1);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .rolling-ball {
+      position: absolute;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 2rem;
+      color: white;
+      z-index: 10;
+      pointer-events: none;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+      opacity: 0;
+    }
+
+    .status-banner {
+      width: 100%;
+      text-align: center;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.8);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .history-container {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      margin-bottom: 1rem;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .history-table th {
+      background: rgba(15, 23, 42, 0.9);
+      color: #38bdf8;
+      padding: 10px;
+      font-size: 1.1rem;
+      border-bottom: 2px solid #334155;
+      position: sticky;
+      top: 0;
+    }
+
+    .history-table td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #1e293b;
+      font-weight: 700;
+      font-size: 1.6rem; 
+    }
+
+    .guess-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .formula-builder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+      background: #0f172a;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      flex-wrap: wrap;
+    }
+
+    .formula-prefix {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #fbbf24;
+    }
+
+    .select-val {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #475569;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 1.4rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .select-val:focus {
+      border-color: #38bdf8;
+    }
+
+    .btn-submit-guess {
+      width: 100%;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 1.25rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .btn-submit-guess:hover {
+      filter: brightness(1.15);
+      transform: translateY(-2px);
+    }
+
+    .toast-msg {
+      position: fixed;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(225, 29, 72, 0.95);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 1.15rem;
+      box-shadow: 0 8px 25px rgba(225, 29, 72, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 200;
+    }
+
+    .toast-msg.active {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 12, 20, 0.88);
+      backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border: 2px solid #38bdf8;
+      border-radius: 24px;
+      padding: 2.2rem;
+      max-width: 620px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 50px rgba(56, 189, 248, 0.4);
+      transform: scale(0.85);
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    #lobbyModal .modal-card {
+      max-width: 780px; 
+    }
+
+    .modal-icon-badge {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.2rem;
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      color: #fff;
+      box-shadow: 0 0 25px rgba(251, 191, 36, 0.6);
+    }
+
+    .modal-title {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal-formula-card {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 14px;
+      padding: 1rem;
+      font-size: 2rem;
+      font-weight: 900;
+      color: #38bdf8;
+      margin: 1.2rem 0;
+      letter-spacing: 1px;
+    }
+
+    .modal-concept-box {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.2rem;
+      margin-bottom: 1.2rem;
+      text-align: left;
+      font-size: 1.15rem;
+      color: #e2e8f0;
+      line-height: 1.6;
+    }
+
+    .math-var {
+      font-family: 'Times New Roman', Times, serif;
+      font-style: italic;
+      font-weight: bold;
+      color: #fbbf24;
+      padding: 0 3px;
+      font-size: 1.1em;
+    }
+
+    .lobby-rules-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+
+    .rule-step {
+      display: flex;
+      align-items: center;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 12px;
+      padding: 12px 18px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      white-space: nowrap;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, #0284c7, #38bdf8);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 1.1rem;
+      margin-right: 15px;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+    }
+
+    .step-text {
+      font-size: 1.15rem;
+      color: #e2e8f0;
+    }
+
+    .name-input-group {
+      margin: 1.2rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+
+    .name-input-group label {
+      color: #fbbf24;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .name-input-group input {
+      background: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 1.2rem;
+      color: #fff;
+      font-weight: 700;
+      outline: none;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(56,189,248,0.5)); }
+      50% { transform: scale(1.02); filter: drop-shadow(0 0 15px rgba(56,189,248,0.8)); }
+    }
+
+    @keyframes eyeScan {
+      0%, 100% { fill: #38bdf8; }
+      50% { fill: #f43f5e; }
+    }
+
+    @keyframes spinGear {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes floatZen {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .robot-working { animation: pulseGlow 0.4s infinite; }
+
+    #confetti-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 150;
+    }
+
+    @media (max-width: 1024px) {
+      body { height: auto; overflow-y: auto; }
+      .game-container { grid-template-columns: 1fr; height: auto; }
+      #lobbyModal .modal-card { white-space: normal; }
+      .rule-step { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="toast-msg" id="toastMsg">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    <span id="toastText">規則不太對喔！觀察看看紀錄再試一次！</span>
+  </div>
+
+  <header>
+    <div class="logo">
+      <i class="fa-solid fa-robot"></i>
+      <span>魔數機器 Magic Function</span>
+    </div>
+    <div class="nav-center">
+      <div class="nav-robots" id="robotTabs"></div>
+      <div class="user-tag" onclick="openLobby()" title="點擊修改姓名與重看規則">
+        <i class="fa-solid fa-user-graduate"></i>
+        <span id="displayUserName">數學探險家</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="game-container">
+    <div class="panel-card ball-pool-container">
+      <div class="panel-title">
+        <i class="fa-solid fa-circle-dot"></i> 數字球池 (Input Pool)
+      </div>
+      <p style="font-size:0.95rem; color:var(--text-sub);">
+        點擊球體，投入機器入口進行轉換！
+      </p>
+
+      <div class="pool-hopper" id="ballPool"></div>
+
+      <div class="panel-title" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+        <i class="fa-solid fa-keyboard"></i> 自訂數字輸入
+      </div>
+      <div class="custom-input-box">
+        <input type="number" id="customNum" placeholder="輸入數字..." />
+        <button class="btn-action" id="btnCustomDrop">投入</button>
+      </div>
+    </div>
+
+    <div class="arena-container">
+      <div class="robot-display-card" id="robotCard">
+        <div class="robot-header-info">
+          <div class="robot-name" id="robotName">機器人一號</div>
+          <div class="robot-subtitle" id="robotDesc">正在等待輸入數字...</div>
+        </div>
+
+        <div class="robot-stage">
+          <div class="funnel-zone">
+            <i class="fa-solid fa-arrow-down-long"></i> 入口 (<span class="math-var">x</span>)
+          </div>
+
+          <div class="robot-svg-wrapper" id="robotSvgContainer"></div>
+
+          <div class="chute-zone">
+            出口 (<span class="math-var">y</span>) <i class="fa-solid fa-arrow-down-long"></i>
+          </div>
+
+          <div class="rolling-ball ball-c1" id="animBall">0</div>
+        </div>
+
+        <div class="status-banner" id="statusDisplay">
+          <span style="color:#38bdf8; font-weight:700; font-size:1.15rem;"><i class="fa-solid fa-lightbulb"></i> 提示：</span>
+          <span style="color:#e2e8f0; font-size:1.15rem;" id="statusText">投入多個數字，觀察右側結果轉換表規律！</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">
+        <i class="fa-solid fa-list-check"></i> 運算轉換紀錄
+      </div>
+      
+      <div class="history-container">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>輸入 (<span class="math-var">x</span>)</th>
+              <th>➔</th>
+              <th>輸出 (<span class="math-var">y</span>)</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+
+      <div class="panel-title">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> 猜猜看隱藏公式！
+      </div>
+
+      <div class="guess-box" id="guessBox"></div>
+    </div>
+  </div>
+
+  <!-- 1. 開局大廳 Modal -->
+  <div class="modal-overlay active" id="lobbyModal">
+    <div class="modal-card">
+      <div class="modal-icon-badge" style="background: linear-gradient(135deg, #0284c7, #38bdf8);">
+        <i class="fa-solid fa-compass-drafting"></i>
+      </div>
+      <div class="modal-title">歡迎來到【魔數機器】</div>
+      <div style="font-size:1.15rem; color:#cbd5e1; margin-top: 4px;">
+        探索數學邏輯，破解神秘函數規律
+      </div>
+
+      <div class="name-input-group">
+        <label for="playerNameInput"><i class="fa-solid fa-user-pen"></i> 請輸入探索者姓名：</label>
+        <input type="text" id="playerNameInput" placeholder="請輸入姓名..." value="數學探險家" maxlength="12">
+      </div>
+
+      <div class="lobby-rules-container">
+        <div class="rule-step">
+          <div class="step-num">1</div>
+          <div class="step-text"><b>投入輸入變數：</b>點擊左側球池或自訂數值，將 <span class="math-var">x</span> 投入機器入口。</div>
+        </div>
+        <div class="rule-step">
+          <div class="step-num">2</div>
+          <div class="step-text"><b>觀察輸出數值：</b>機器人完成內部運算後，在紀錄表中查看對應的 <span class="math-var">y</span> 值。</div>
+        </div>
+        <div class="rule-step">
+          <div class="step-num">3</div>
+          <div class="step-text"><b>推導函數關係：</b>在右下角調整算式結構與數值，找出該機器的運算公式！</div>
+        </div>
+        <div class="rule-step">
+          <div class="step-num">4</div>
+          <div class="step-text"><b>循序闖關解鎖：</b>必須依序破解每道關卡，全數破關即可登入榮譽金榜。</div>
+        </div>
+      </div>
+
+      <button class="btn-action" style="width:100%; padding:14px; font-size:1.25rem;" onclick="startFromLobby()">
+        開始探索機器奧秘 <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. 單關通關 Modal -->
+  <div class="modal-overlay" id="winModal">
+    <div class="modal-card">
+      <div class="modal-icon-badge">
+        <i class="fa-solid fa-award"></i>
+      </div>
+      <div class="modal-title" id="modalTitle">太棒了！破解成功！</div>
+      <div style="font-size:1.15rem; color:var(--text-sub);" id="modalUserGreet">恭喜你成功找出運算機制：</div>
+      
+      <div class="modal-formula-card" id="modalFormula"></div>
+
+      <div class="modal-concept-box" id="modalConcept"></div>
+
+      <button class="btn-action" style="width:100%; padding:14px; font-size:1.25rem;" id="btnNextLevel">
+        挑戰下一台機器人 <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. 全通關慶祝 Modal -->
+  <div class="modal-overlay" id="celebrationModal">
+    <div class="modal-card" style="border-color: #fbbf24; max-width: 680px;">
+      <div class="modal-icon-badge" style="background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 0 30px rgba(251, 191, 36, 0.7);">
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+      <div class="modal-title" style="color: #fbbf24;">🎉 榮耀通關！函數破密大師</div>
+      <div style="font-size:1.35rem; color:#fff; font-weight:700; margin-top: 6px;" id="celebratePlayerName">
+        恭喜 數學探險家 同學！
+      </div>
+
+      <div class="modal-concept-box" style="margin-top: 1.2rem; background: rgba(30, 41, 59, 0.9);">
+        <p style="font-size:1.15rem; color:#f8fafc; margin-bottom: 10px;">
+          你已經完全破解了五台魔數機器人，融會貫通了國中函數核心：
+        </p>
+        <ul style="list-style-type: none; padding-left: 0; line-height: 1.8; color: #93c5fd;">
+          <li>✨ <b>第一關</b>：一次函數 <span class="math-var">y = 2x + 7</span></li>
+          <li>✨ <b>第二關</b>：負斜率函數 <span class="math-var">y = -3x - 5</span></li>
+          <li>✨ <b>第三關</b>：複合函數 <span class="math-var">y = 3(x - 1) + 10</span></li>
+          <li>✨ <b>第四關</b>：二次函數 <span class="math-var">y = x² + 2</span></li>
+          <li>✨ <b>第五關</b>：常數函數 <span class="math-var">y = 7</span></li>
+        </ul>
+        <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.2); margin: 12px 0;">
+        <blockquote style="font-style: italic; color: #fde047; font-size:1.05rem;">
+          「數學是思維的體操，規律是萬物的語言。」—— 笛卡兒<br>
+          生活與世界充滿著精準的變數與對應關係，願你帶著敏銳的洞察力，持續在知識的海洋中探索！
+        </blockquote>
+      </div>
+
+      <button class="btn-action" style="width:100%; padding:14px; font-size:1.25rem; background: linear-gradient(135deg, #10b981, #059669);" onclick="restartGame()">
+        <i class="fa-solid fa-rotate-left"></i> 再次挑戰，精益求精
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let playerName = "數學探險家";
+
+    const ROBOT_CONFIGS = [
+      {
+        id: 0,
+        name: "光能號 Alpha",
+        subtitle: "一次倍率增長型",
+        color: "#38bdf8",
+        formulaText: "y = 2x + 7",
+        ruleType: "linear",
+        calc: (x) => 2 * x + 7,
+        optionsA: [1, 2, 3, 4],
+        optionsB: [3, 5, 7, 9],
+        correctA: 2,
+        correctB: 7,
+        concept: "<b>【一次函數 <span class='math-var'>y = 2x + 7</span>】</b><br>每當輸入數字 <span class='math-var'>x</span>，機器人內部先乘以 2，再加上 7。在坐標平面上，這是一條斜率為 2、截距為 7 的直線函數！"
+      },
+      {
+        id: 1,
+        name: "逆光號 Beta",
+        subtitle: "負向係數遞減型",
+        color: "#f43f5e",
+        formulaText: "y = -3x - 5",
+        ruleType: "linear_neg",
+        calc: (x) => -3 * x - 5,
+        optionsA: [-1, -2, -3, -4],
+        optionsB: [2, 3, 5, 7],
+        correctA: -3,
+        correctB: 5,
+        concept: "<b>【負係數函數 <span class='math-var'>y = -3x - 5</span>】</b><br>當 <span class='math-var'>x</span> 愈大，乘上負係數後輸出反而愈小！熟練正負數乘除與減法運算，是解開負斜率直線的關鍵。"
+      },
+      {
+        id: 2,
+        name: "多維號 Gamma",
+        subtitle: "括號複合運算型",
+        color: "#fbbf24",
+        formulaText: "y = 3(x - 1) + 10",
+        ruleType: "parenthesis_linear",
+        calc: (x) => 3 * (x - 1) + 10,
+        optionsVal1: [2, 3, 4, 5],
+        optionsVal2: [1, 2, 3, 4],
+        optionsVal3: [5, 7, 10, 12],
+        correctVal1: 3,
+        correctVal2: 1,
+        correctVal3: 10,
+        concept: "<b>【複合函數 <span class='math-var'>y = 3(x - 1) + 10</span>】</b><br>先執行括號內減法 (<span class='math-var'>x</span> - 1)，再放大 3 倍，最後加上 10。利用分配律化簡可得 <span class='math-var'>y = 3x + 7</span>！"
+      },
+      {
+        id: 3,
+        name: "星雲號 Delta",
+        subtitle: "潛能爆發型", 
+        color: "#c084fc",
+        formulaText: "y = x² + 2", 
+        ruleType: "quadratic",
+        calc: (x) => x * x + 2,
+        optionsOp: ["+", "-", "×"],
+        optionsVar: ["2", "3", "4", "x"],
+        optionsVal: [1, 2, 3, 4, 5],
+        correctOp: "×",
+        correctVar: "x",
+        correctVal: 2,
+        concept: "<b>【二次函數 <span class='math-var'>y = x² + 2</span>】</b><br>輸入數字自身相乘（即 <span class='math-var'>x</span> 乘以 <span class='math-var'>x</span>）再加上 2！其數值呈現非線性高速成長，在坐標平面上形成對稱拋物線。"
+      },
+      {
+        id: 4,
+        name: "守恆號 Omega",
+        subtitle: "恆定基準型",
+        color: "#4ade80",
+        formulaText: "y = 7 (常數)",
+        ruleType: "constant",
+        calc: (x) => 7,
+        optionsVal: [0, 5, 7, 10, 100],
+        correctVal: 7,
+        concept: "<b>【常數函數 <span class='math-var'>y = 7</span>】</b><br>這是一台極具特性的機器人！<b>不論輸入任何數值，輸出永遠恆定為 7</b>。<br>在科學與數學中，常數函數代表基準與守恆定律，無論環境變數如何變動，核心基準依舊穩定不移！"
+      }
+    ];
+
+    function getRobotSvg(index) {
+      if (index === 0) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <line x1="140" y1="45" x2="140" y2="15" stroke="#38bdf8" stroke-width="4" />
+            <circle cx="140" cy="12" r="9" fill="#38bdf8" />
+            <rect x="70" y="45" width="140" height="90" rx="45" fill="#1e293b" stroke="#38bdf8" stroke-width="4"/>
+            <rect x="90" y="65" width="100" height="50" rx="25" fill="#090d16"/>
+            <circle cx="115" cy="90" r="10" fill="#38bdf8" style="animation: eyeScan 1.5s infinite;" />
+            <circle cx="165" cy="90" r="10" fill="#38bdf8" style="animation: eyeScan 1.5s infinite;" />
+            <rect x="65" y="145" width="150" height="115" rx="30" fill="#0f172a" stroke="#38bdf8" stroke-width="4"/>
+            <circle cx="140" cy="200" r="28" fill="#1e293b" stroke="#0284c7" stroke-width="3"/>
+            <path d="M140 188 L146 198 L158 198 L148 205 L152 216 L140 209 L128 216 L132 205 L122 198 L134 198 Z" fill="#fbbf24"/>
+            <path d="M 30 35 L 75 65 L 75 155" fill="none" stroke="#fbbf24" stroke-width="8" stroke-linecap="round"/>
+            <path d="M 205 220 L 250 220 L 250 260" fill="none" stroke="#4ade80" stroke-width="8" stroke-linecap="round"/>
+          </svg>`;
+      } else if (index === 1) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <polygon points="70,40 90,65 50,65" fill="#f43f5e" />
+            <polygon points="210,40 190,65 230,65" fill="#f43f5e" />
+            <polygon points="80,65 200,65 220,130 60,130" fill="#1e293b" stroke="#f43f5e" stroke-width="4"/>
+            <polygon points="90,80 190,80 200,110 80,110" fill="#000" />
+            <line x1="95" y1="95" x2="185" y2="95" stroke="#f43f5e" stroke-width="6" stroke-linecap="round"/>
+            <polygon points="50,140 230,140 210,260 70,260" fill="#0f172a" stroke="#f43f5e" stroke-width="4"/>
+            <rect x="90" y="165" width="100" height="55" fill="#1e293b" stroke="#e11d48" stroke-width="3"/>
+            <line x1="100" y1="165" x2="130" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <line x1="130" y1="165" x2="160" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <line x1="160" y1="165" x2="190" y2="220" stroke="#fbbf24" stroke-width="6"/>
+            <path d="M 30 35 L 75 80 L 75 160" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 200 230 L 250 230 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else if (index === 2) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <rect x="75" y="15" width="14" height="40" fill="#fbbf24"/>
+            <circle cx="82" cy="15" r="12" fill="#f59e0b"/>
+            <rect x="191" y="15" width="14" height="40" fill="#fbbf24"/>
+            <circle cx="198" cy="15" r="12" fill="#f59e0b"/>
+            <rect x="85" y="45" width="110" height="90" rx="15" fill="#1e293b" stroke="#fbbf24" stroke-width="4"/>
+            <ellipse cx="140" cy="85" rx="35" ry="20" fill="#090d16" stroke="#fbbf24" stroke-width="2"/>
+            <circle cx="140" cy="85" r="12" fill="#fbbf24"/>
+            <path d="M70 145 L210 145 L180 260 L100 260 Z" fill="#0f172a" stroke="#fbbf24" stroke-width="4"/>
+            <polygon points="140,165 165,210 115,210" fill="#d97706" stroke="#fef08a" stroke-width="3"/>
+            <path d="M 30 35 L 75 65 L 75 155" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 175 230 L 250 230 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else if (index === 3) {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%">
+            <rect x="70" y="40" width="60" height="70" rx="10" fill="#1e293b" stroke="#c084fc" stroke-width="3"/>
+            <rect x="150" y="40" width="60" height="70" rx="10" fill="#1e293b" stroke="#c084fc" stroke-width="3"/>
+            <circle cx="100" cy="70" r="8" fill="#c084fc"/>
+            <circle cx="180" cy="70" r="8" fill="#c084fc"/>
+            <rect x="120" y="60" width="40" height="15" fill="#9333ea"/>
+            <rect x="55" y="125" width="170" height="130" rx="16" fill="#0f172a" stroke="#c084fc" stroke-width="4"/>
+            <g style="animation: spinGear 3s linear infinite;" transform-origin="105 185">
+              <circle cx="105" cy="185" r="22" stroke="#c084fc" stroke-width="6" fill="none" stroke-dasharray="10,6"/>
+            </g>
+            <g style="animation: spinGear 3s linear infinite reverse;" transform-origin="170 185">
+              <circle cx="170" cy="185" r="22" stroke="#e9d5ff" stroke-width="6" fill="none" stroke-dasharray="10,6"/>
+            </g>
+            <path d="M 25 30 L 65 60 L 65 140" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 215 220 L 255 220 L 255 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      } else {
+        return `
+          <svg viewBox="0 0 280 290" width="100%" height="100%" style="animation: floatZen 3s ease-in-out infinite;">
+            <ellipse cx="140" cy="30" rx="50" ry="12" fill="none" stroke="#4ade80" stroke-width="4" opacity="0.8"/>
+            <ellipse cx="140" cy="75" rx="45" ry="35" fill="#1e293b" stroke="#4ade80" stroke-width="4"/>
+            <polygon points="140,55 147,68 140,81 133,68" fill="#4ade80"/>
+            <line x1="115" y1="85" x2="130" y2="85" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+            <line x1="150" y1="85" x2="165" y2="85" stroke="#4ade80" stroke-width="3" stroke-linecap="round"/>
+            <path d="M95 120 C95 120, 140 135, 185 120 C195 160, 190 220, 140 230 C90 220, 85 160, 95 120 Z" fill="#0f172a" stroke="#4ade80" stroke-width="4"/>
+            <path d="M70 240 Q140 275 210 240 Q140 290 70 240 Z" fill="#15803d" stroke="#86efac" stroke-width="3"/>
+            <path d="M 30 35 L 85 65 L 85 140" fill="none" stroke="#fbbf24" stroke-width="8"/>
+            <path d="M 180 220 L 250 220 L 250 260" fill="none" stroke="#4ade80" stroke-width="8"/>
+          </svg>`;
+      }
+    }
+
+    let currentRobotIndex = 0;
+    let robotHistory = [[], [], [], [], []];
+    let robotCompleted = [false, false, false, false, false];
+    let isProcessing = false;
+
+    // 檢查關卡是否已解鎖：第1關預設解鎖，其餘關卡需前一關通關
+    function isLevelUnlocked(index) {
+      if (index === 0) return true;
+      return robotCompleted[index - 1];
+    }
+
+    // Web Audio Synthesizer: 輕快晶瑩的大三和弦琶音
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      if (type === 'drop') {
+        const notes = [523.25, 659.25, 783.99]; // C5 -> E5 -> G5
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.22);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.04);
+          osc.stop(now + idx * 0.04 + 0.22);
+        });
+      } else if (type === 'process') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(640, now + 0.28);
+        gain.gain.setValueAtTime(0.07, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.28);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.28);
+      } else if (type === 'win') {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.09);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.38);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.09);
+          osc.stop(now + idx * 0.09 + 0.38);
+        });
+      } else if (type === 'wrong') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.setValueAtTime(220, now + 0.12);
+        gain.gain.setValueAtTime(0.14, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      }
+    }
+
+    function initUI() {
+      renderRobotTabs();
+      renderBallPool();
+      loadRobot(0);
+    }
+
+    function startFromLobby() {
+      const input = document.getElementById("playerNameInput");
+      const name = input.value.trim();
+      playerName = name || "數學探險家";
+      document.getElementById("displayUserName").innerText = playerName;
+      document.getElementById("lobbyModal").classList.remove("active");
+    }
+
+    function openLobby() {
+      document.getElementById("lobbyModal").classList.add("active");
+    }
+
+    function renderRobotTabs() {
+      const nav = document.getElementById("robotTabs");
+      nav.innerHTML = ROBOT_CONFIGS.map((r, i) => {
+        const unlocked = isLevelUnlocked(i);
+        const isCompleted = robotCompleted[i];
+        const isActive = i === currentRobotIndex;
+
+        let statusIcon = '<i class="fa-solid fa-lock" style="font-size:0.85rem; opacity:0.65;"></i>';
+        if (isCompleted) {
+          statusIcon = '<i class="fa-solid fa-circle-check badge-check"></i>';
+        } else if (unlocked) {
+          statusIcon = '<i class="fa-solid fa-unlock-keyhole" style="font-size:0.85rem; color:#38bdf8;"></i>';
+        }
+
+        return `
+          <div class="robot-tab ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''} ${!unlocked ? 'locked' : ''}" 
+               onclick="handleTabClick(${i})"
+               title="${!unlocked ? '請依序破解前面的關卡！' : '關卡 ' + (i + 1)}">
+            <i class="fa-solid fa-robot"></i>
+            <span>關卡 ${i + 1}</span>
+            ${statusIcon}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleTabClick(index) {
+      if (isProcessing) return;
+      if (!isLevelUnlocked(index)) {
+        playSound('wrong');
+        showToast(`🔒 關卡 ${index + 1} 尚未解鎖，請依序破解前方的機器人！`);
+        return;
+      }
+      switchRobot(index);
+    }
+
+    function renderBallPool() {
+      const pool = document.getElementById("ballPool");
+      const defaultNumbers = [1, 2, 3, 5, -2, 0, 4, -1];
+      const colors = ['ball-c1', 'ball-c2', 'ball-c3', 'ball-c4', 'ball-c5', 'ball-c6', 'ball-c1', 'ball-c2'];
+
+      pool.innerHTML = defaultNumbers.map((num, idx) => `
+        <div class="ball ${colors[idx % colors.length]}" onclick="processBall(${num}, '${colors[idx % colors.length]}')">
+          ${num}
+        </div>
+      `).join('');
+    }
+
+    function loadRobot(index) {
+      currentRobotIndex = index;
+      renderRobotTabs();
+
+      const config = ROBOT_CONFIGS[index];
+      document.getElementById("robotName").innerText = config.name;
+      document.getElementById("robotName").style.color = config.color;
+      document.getElementById("robotDesc").innerText = config.subtitle;
+      document.getElementById("robotSvgContainer").innerHTML = getRobotSvg(index);
+
+      renderHistory();
+      renderGuessControls();
+    }
+
+    function switchRobot(index) {
+      if (isProcessing) return;
+      loadRobot(index);
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById("historyBody");
+      const history = robotHistory[currentRobotIndex];
+
+      if (history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="color:var(--text-sub); font-size:1.1rem; padding:15px;">尚無轉換紀錄<br>請投入左側數字球！</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = history.map(item => `
+        <tr>
+          <td style="color:#fbbf24;">${item.input}</td>
+          <td style="color:var(--text-sub);"><i class="fa-solid fa-arrow-right-long"></i></td>
+          <td style="color:#4ade80;">${item.output}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderGuessControls() {
+      const box = document.getElementById("guessBox");
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+
+      if (config.ruleType === "linear") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix">y = </span>
+            <select class="select-val" id="guessA">
+              ${config.optionsA.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
+            <span class="formula-prefix">x + </span>
+            <select class="select-val" id="guessB">
+              ${config.optionsB.map(b => `<option value="${b}">${b}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 驗證猜測
+          </button>
+        `;
+      } else if (config.ruleType === "linear_neg") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix">y = </span>
+            <select class="select-val" id="guessA">
+              ${config.optionsA.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
+            <span class="formula-prefix">x - </span>
+            <select class="select-val" id="guessB">
+              ${config.optionsB.map(b => `<option value="${b}">${b}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 驗證猜測
+          </button>
+        `;
+      } else if (config.ruleType === "parenthesis_linear") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix">y = </span>
+            <select class="select-val" id="guessP1">
+              ${config.optionsVal1.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+            <span class="formula-prefix">( x - </span>
+            <select class="select-val" id="guessP2">
+              ${config.optionsVal2.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+            <span class="formula-prefix">) + </span>
+            <select class="select-val" id="guessP3">
+              ${config.optionsVal3.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 驗證猜測
+          </button>
+        `;
+      } else if (config.ruleType === "quadratic") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix">y = x </span>
+            <select class="select-val" id="guessQOp">
+              ${config.optionsOp.map(op => `<option value="${op}">${op}</option>`).join('')}
+            </select>
+            <select class="select-val" id="guessQVar">
+              ${config.optionsVar.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+            <span class="formula-prefix"> + </span>
+            <select class="select-val" id="guessQuad">
+              ${config.optionsVal.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 驗證猜測
+          </button>
+        `;
+      } else if (config.ruleType === "constant") {
+        box.innerHTML = `
+          <div class="formula-builder">
+            <span class="formula-prefix" style="font-size: 1.15rem;">不論 x 為何， y 永遠為 </span>
+            <select class="select-val" id="guessValConst">
+              ${config.optionsVal.map(v => `<option value="${v}">${v}</option>`).join('')}
+            </select>
+          </div>
+          <button class="btn-submit-guess" onclick="checkGuess()">
+            <i class="fa-solid fa-paper-plane"></i> 驗證猜測
+          </button>
+        `;
+      }
+    }
+
+    function processBall(inputVal, ballClass) {
+      if (isProcessing) return;
+      isProcessing = true;
+
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+      const outputVal = config.calc(inputVal);
+
+      const animBall = document.getElementById("animBall");
+      const robotCard = document.getElementById("robotCard");
+      const statusText = document.getElementById("statusText");
+
+      animBall.className = `rolling-ball ${ballClass}`;
+      animBall.innerText = inputVal;
+      animBall.style.opacity = '1';
+      animBall.style.left = '12%';
+      animBall.style.top = '15px';
+      
+      playSound('drop');
+      statusText.innerText = `正在投入數字 ${inputVal}...`;
+
+      setTimeout(() => {
+        animBall.style.transition = 'all 0.45s ease-in';
+        animBall.style.left = '28%';
+        animBall.style.top = '110px';
+        animBall.style.transform = 'scale(0.65)';
+      }, 100);
+
+      setTimeout(() => {
+        animBall.style.opacity = '0';
+        robotCard.classList.add('robot-working');
+        statusText.innerText = `🤖 機器人核心正在運算中...`;
+        playSound('process');
+      }, 550);
+
+      setTimeout(() => {
+        robotCard.classList.remove('robot-working');
+        animBall.innerText = outputVal;
+        animBall.style.transition = 'none';
+        animBall.style.left = '64%';
+        animBall.style.top = '180px';
+        animBall.style.transform = 'scale(0.65)';
+        animBall.style.opacity = '1';
+
+        setTimeout(() => {
+          animBall.style.transition = 'all 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+          animBall.style.left = '72%';
+          animBall.style.top = '225px';
+          animBall.style.transform = 'scale(1.1)';
+          playSound('drop');
+          statusText.innerText = `計算完畢！輸出結果為 ${outputVal}`;
+
+          robotHistory[currentRobotIndex].unshift({ input: inputVal, output: outputVal });
+          renderHistory();
+          isProcessing = false;
+        }, 100);
+
+      }, 1450);
+    }
+
+    document.getElementById("btnCustomDrop").addEventListener("click", () => {
+      const input = document.getElementById("customNum");
+      const val = parseInt(input.value);
+      if (!isNaN(val)) {
+        processBall(val, 'ball-c4');
+        input.value = '';
+      }
+    });
+
+    function showToast(msg) {
+      const toast = document.getElementById("toastMsg");
+      document.getElementById("toastText").innerText = msg;
+      toast.classList.add("active");
+      setTimeout(() => {
+        toast.classList.remove("active");
+      }, 2500);
+    }
+
+    function checkGuess() {
+      const config = ROBOT_CONFIGS[currentRobotIndex];
+      let isCorrect = false;
+
+      if (config.ruleType === "linear" || config.ruleType === "linear_neg") {
+        const a = parseInt(document.getElementById("guessA").value);
+        const b = parseInt(document.getElementById("guessB").value);
+        if (a === config.correctA && b === config.correctB) isCorrect = true;
+      } else if (config.ruleType === "parenthesis_linear") {
+        const v1 = parseInt(document.getElementById("guessP1").value);
+        const v2 = parseInt(document.getElementById("guessP2").value);
+        const v3 = parseInt(document.getElementById("guessP3").value);
+        if (v1 === config.correctVal1 && v2 === config.correctVal2 && v3 === config.correctVal3) isCorrect = true;
+      } else if (config.ruleType === "quadratic") {
+        const op = document.getElementById("guessQOp").value;
+        const vVar = document.getElementById("guessQVar").value;
+        const v = parseInt(document.getElementById("guessQuad").value);
+        if (op === config.correctOp && vVar === config.correctVar && v === config.correctVal) isCorrect = true;
+      } else if (config.ruleType === "constant") {
+        const v = parseInt(document.getElementById("guessValConst").value);
+        if (v === config.correctVal) isCorrect = true;
+      }
+
+      if (isCorrect) {
+        playSound('win');
+        triggerConfetti();
+        robotCompleted[currentRobotIndex] = true;
+        renderRobotTabs();
+
+        // 必須全體5道關卡都完成才觸發全通關慶祝，避免任何跳關漏洞
+        const allCompleted = robotCompleted.every(Boolean);
+
+        if (allCompleted) {
+          setTimeout(() => {
+            document.getElementById("celebratePlayerName").innerText = `恭喜 ${playerName} 同學！`;
+            document.getElementById("celebrationModal").classList.add("active");
+          }, 800);
+        } else {
+          document.getElementById("modalTitle").innerText = `🎉 破解成功！`;
+          document.getElementById("modalUserGreet").innerText = `恭喜 ${playerName}，成功找出第 ${currentRobotIndex + 1} 台機器人的規律：`;
+          document.getElementById("modalFormula").innerHTML = `<span class="math-var">${config.formulaText}</span>`;
+          document.getElementById("modalConcept").innerHTML = config.concept;
+          document.getElementById("winModal").classList.add("active");
+        }
+      } else {
+        playSound('wrong');
+        showToast("規則不太對喔！多投幾顆數字球觀察右側轉換紀錄吧！");
+      }
+    }
+
+    document.getElementById("btnNextLevel").addEventListener("click", () => {
+      document.getElementById("winModal").classList.remove("active");
+      if (currentRobotIndex < ROBOT_CONFIGS.length - 1 && isLevelUnlocked(currentRobotIndex + 1)) {
+        switchRobot(currentRobotIndex + 1);
+      }
+    });
+
+    function restartGame() {
+      document.getElementById("celebrationModal").classList.remove("active");
+      robotCompleted = [false, false, false, false, false];
+      robotHistory = [[], [], [], [], []];
+      renderRobotTabs();
+      loadRobot(0);
+    }
+
+    function triggerConfetti() {
+      const canvas = document.getElementById("confetti-canvas");
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      const colors = ['#f87171', '#fbbf24', '#4ade80', '#38bdf8', '#c084fc', '#f472b6'];
+
+      for (let i = 0; i < 110; i++) {
+        particles.push({
+          x: canvas.width / 2,
+          y: canvas.height / 2,
+          vx: (Math.random() - 0.5) * 16,
+          vy: (Math.random() - 0.8) * 16,
+          size: Math.random() * 8 + 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let active = false;
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.22;
+          p.alpha -= 0.015;
+
+          if (p.alpha > 0) {
+            active = true;
+            ctx.globalAlpha = p.alpha;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(p.x, p.y, p.size, p.size);
+          }
+        });
+
+        if (active) requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    window.onload = initUI;
+  </script>
+</body>
+</html>
