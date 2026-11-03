@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>極限記憶挑戰</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 漸層流動背景動畫 */
+    @keyframes bgFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .bg-flowing {
+      background: linear-gradient(-45deg, #0b1329, #172554, #1d4ed8, #0284c7, #1e3a8a);
+      background-size: 400% 400%;
+      animation: bgFlow 14s ease infinite;
+    }
+
+    /* 白色星點不時閃爍動畫 */
+    @keyframes twinkle {
+      0%, 100% {
+        opacity: 0.1;
+        transform: scale(0.6);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.4);
+        filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.95));
+      }
+    }
+    .animate-twinkle {
+      animation: twinkle 2.5s ease-in-out infinite;
+    }
+
+    /* 懸浮微光光球動畫 */
+    @keyframes floatParticle {
+      0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+      20% { opacity: 0.6; }
+      80% { opacity: 0.6; }
+      100% { transform: translateY(-10vh) scale(1.5); opacity: 0; }
+    }
+
+    /* 點錯時的抖動警示動畫 */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px) rotate(-2deg); }
+      75% { transform: translateX(5px) rotate(2deg); }
+    }
+    .animate-shake {
+      animation: shake 0.2s ease-in-out;
+    }
+
+    /* 慶祝彩帶掉落動畫 */
+    @keyframes confettiFall {
+      0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body class="font-sans text-slate-800 antialiased min-h-screen w-full flex items-center justify-center overflow-x-hidden bg-flowing selection:bg-blue-500 selection:text-white relative">
+
+  <!-- 背景動態星空與微光層 (全域層，穿透至大廳) -->
+  <div id="star-container" class="fixed inset-0 pointer-events-none overflow-hidden z-[5]"></div>
+
+  <!-- ==================== 1. 大廳畫面 (Lobby) ==================== -->
+  <main id="screen-lobby" class="relative z-10 flex min-h-screen w-full items-center justify-center bg-transparent p-4 md:p-8 text-white">
+    <div class="w-full max-w-5xl flex flex-col md:flex-row gap-6 md:gap-8 my-auto">
+      
+      <!-- 左欄：規則與關卡選擇 (字體全面加粗、增強清晰度) -->
+      <section class="flex-1 bg-slate-900/40 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-10 shadow-2xl flex flex-col justify-center transition-all hover:bg-slate-900/50">
+        <header class="mb-8">
+          <h1 class="text-4xl md:text-5xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-white drop-shadow-[0_2px_10px_rgba(255,255,255,0.3)]">
+            極限記憶挑戰
+          </h1>
+          <p class="text-blue-100 text-lg md:text-xl font-bold tracking-wide">
+            專注力、記憶力與反應力的極限考驗
+          </p>
+        </header>
+
+        <div class="bg-blue-950/60 rounded-2xl p-5 mb-8 border border-blue-400/30 shadow-inner">
+          <h2 class="text-xl font-extrabold text-blue-300 mb-3 flex items-center tracking-wide">
+            <svg class="w-6 h-6 mr-2 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            遊戲規則
+          </h2>
+          <ul class="text-white space-y-2.5 text-base font-bold list-disc list-inside leading-relaxed">
+            <li>依序找出並點擊正確的方塊。</li>
+            <li>點擊前半段目標後，方塊會翻轉成後半段內容。</li>
+            <li>點擊後半段目標後，方塊將會消失。</li>
+            <li>以最快速度清空所有方塊即通關！</li>
+          </ul>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-lg md:text-xl font-extrabold text-blue-100 mb-2">
+            選擇挑戰關卡：
+          </h3>
+          <div id="level-options" class="space-y-3">
+            <!-- 由 JavaScript 動態生成關卡選項 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 右欄：玩家姓名輸入與開始按鈕 (字體全面加粗) -->
+      <section class="flex-1 bg-gradient-to-br from-blue-950/85 to-slate-950/90 backdrop-blur-xl border border-blue-400/40 rounded-3xl p-6 md:p-10 shadow-2xl flex flex-col justify-center border-t-4 border-t-blue-400">
+        <div class="text-center mb-10">
+          <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-500/25 rounded-full mb-6 border-2 border-blue-400/60 shadow-[0_0_25px_rgba(59,130,246,0.4)]">
+            <svg class="w-10 h-10 text-blue-200 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-2">準備好挑戰了嗎？</h2>
+          <p class="text-blue-200 text-base font-bold">輸入您的稱呼，創造最佳紀錄</p>
+        </div>
+
+        <div class="mb-8 w-full max-w-sm mx-auto">
+          <label class="block text-base font-extrabold text-blue-100 mb-2 pl-1" for="player-name-input">
+            挑戰者姓名
+          </label>
+          <input
+            id="player-name-input"
+            type="text"
+            placeholder="請輸入姓名..."
+            class="w-full px-5 py-4 text-lg font-bold bg-black/50 border-2 border-blue-400/60 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-300 text-white placeholder-slate-400 transition-all shadow-inner"
+          />
+          <p id="error-message" class="text-red-400 text-base font-bold mt-3 animate-pulse pl-1 hidden"></p>
+        </div>
+
+        <div class="w-full max-w-sm mx-auto mt-auto md:mt-0">
+          <button
+            id="btn-start-game"
+            class="w-full group relative px-8 py-5 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500 text-white font-black text-xl rounded-2xl shadow-[0_0_25px_rgba(59,130,246,0.5)] hover:shadow-[0_0_35px_rgba(99,102,241,0.7)] transition-all active:scale-[0.98] overflow-hidden"
+          >
+            <div class="absolute inset-0 w-full h-full bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+            <span class="relative z-10 flex items-center justify-center tracking-wider">
+              開始遊戲
+              <svg class="w-6 h-6 ml-2 stroke-[3] group-hover:translate-x-1.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+            </span>
+          </button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ==================== 2. 遊戲主畫面 (Game) ==================== -->
+  <main id="screen-game" class="hidden flex-col items-center min-h-screen bg-slate-50 w-full select-none touch-manipulation pt-6 pb-10 z-10">
+    <!-- 頂部資訊面板 (計時與玩家資訊，無提示) -->
+    <header class="w-full max-w-3xl px-4 mb-6 sm:mb-8">
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 flex justify-between items-center relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full translate-x-10 -translate-y-10 opacity-50 z-0"></div>
+        
+        <div class="flex flex-col z-10">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Challenger</span>
+          <span id="game-player-display" class="text-blue-900 font-extrabold text-xl">--</span>
+          <span id="game-level-display" class="text-blue-500 text-xs font-medium">--</span>
+        </div>
+        
+        <div class="flex flex-col items-end z-10 bg-slate-50 px-6 py-3 rounded-xl border border-slate-100">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Time</span>
+          <span id="game-timer-display" class="text-slate-800 font-mono font-black text-3xl md:text-4xl tracking-tight">
+            0.00
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 遊戲方格容器 -->
+    <div class="w-full max-w-3xl aspect-square px-4 flex-grow max-h-[70vh] flex flex-col justify-center">
+      <div id="board-grid" class="grid gap-2 sm:gap-3 h-full w-full mx-auto">
+        <!-- 由 JavaScript 動態生成方格 -->
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== 3. 慶祝通關畫面 (Celebration) ==================== -->
+  <main id="screen-result" class="hidden flex-col items-center justify-center min-h-screen bg-gradient-to-t from-blue-950 via-slate-900 to-indigo-950 p-6 text-white w-full relative z-10">
+    <!-- 彩帶容器 -->
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none overflow-hidden z-0"></div>
+
+    <div class="z-10 max-w-md w-full bg-white/10 backdrop-blur-xl rounded-[2rem] shadow-[0_0_50px_rgba(59,130,246,0.2)] p-10 border border-white/20 text-center">
+      <!-- 獎盃圖示 -->
+      <div class="relative w-28 h-28 mx-auto mb-6">
+        <div class="absolute inset-0 bg-yellow-400 blur-xl opacity-40 rounded-full animate-pulse"></div>
+        <div class="relative w-full h-full bg-gradient-to-tr from-yellow-500 to-amber-300 rounded-full flex items-center justify-center shadow-lg border-4 border-yellow-200/50">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 text-white drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        </div>
+      </div>
+      
+      <h1 class="text-5xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-br from-white to-blue-200 drop-shadow-sm">
+        恭喜通關！
+      </h1>
+      
+      <div class="mb-8">
+        <p id="result-player-name" class="text-2xl font-bold text-blue-200">--</p>
+        <p id="result-level-name" class="text-sm text-blue-400 mt-2 bg-blue-950/50 inline-block px-4 py-1 rounded-full border border-blue-500/30">
+          --
+        </p>
+      </div>
+      
+      <div class="bg-black/30 rounded-3xl p-8 mb-10 border border-white/10 shadow-inner relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-50"></div>
+        <p class="text-xs text-blue-300 uppercase tracking-widest mb-2 font-semibold">Final Time</p>
+        <p id="result-final-time" class="text-6xl font-mono font-black text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]">
+          0.00<span class="text-2xl ml-1 text-blue-200">s</span>
+        </p>
+      </div>
+
+      <button
+        id="btn-return-lobby"
+        class="w-full group relative px-6 py-4 bg-white text-blue-950 hover:text-blue-700 font-bold rounded-2xl shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] transition-all active:scale-[0.98] text-lg overflow-hidden"
+      >
+        <span class="relative z-10 flex items-center justify-center">
+          回到大廳
+          <svg class="w-5 h-5 ml-2 group-hover:rotate-180 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        </span>
+      </button>
+    </div>
+  </main>
+
+  <!-- ==================== JavaScript Logic ==================== -->
+  <script>
+    // --- 關卡資料結構定義 ---
+    const LEVELS = {
+      1: {
+        id: 1,
+        name: '第一關：數字挑戰 (1-50)',
+        shortName: '數字挑戰',
+        total: 50,
+        half: 25,
+        gridCols: 'grid-cols-5', // 5x5
+        data: Array.from({ length: 50 }, (_, i) => (i + 1).toString())
+      },
+      2: {
+        id: 2,
+        name: '第二關：孟子選 (生於憂患)',
+        shortName: '孟子選',
+        total: 50,
+        half: 25,
+        gridCols: 'grid-cols-5', // 5x5
+        data: [
+          '舜發於', '畎畝', '之中', '傅說舉於', '版築', '之間', '膠鬲舉於', '魚鹽', '之中', '管夷吾', 
+          '舉於士', '孫叔敖', '舉於海', '百里奚', '舉於市', '故天將降', '大任於是', '人也必先', '苦其心志', '勞其', 
+          '筋骨', '餓其', '體膚', '空乏', '其身', '行拂', '亂其', '所為', '所以', '動心', 
+          '忍性', '增益其所', '不能', '人恆過', '然後能改', '困於心', '衡於慮', '而後作', '徵於色', '發於聲', 
+          '而後喻', '入則無', '法家拂士', '出則無', '敵國外患', '者國恆亡', '然後知', '生於憂患', '而死於', '安樂也'
+        ]
+      },
+      3: {
+        id: 3,
+        name: '第三關：四眾佛子共勉語',
+        shortName: '四眾佛子共勉語',
+        total: 40,
+        half: 20,
+        gridCols: 'grid-cols-5', // 5x4
+        data: [
+          // 1-20 (正面)
+          "信佛學法敬僧", "三寶萬世明燈", "提昇人的品質", "建設人間淨土", "知恩報恩為先", 
+          "利人便是利己", "盡心盡力第一", "不爭你我多少", "慈悲沒有敵人", "智慧不起煩惱", 
+          "忙人時間最多", "勤勞健康最好", "為了廣種福田", "那怕任怨任勞", "布施的人有福", 
+          "行善的人快樂", "時時心有法喜", "念念不離禪悅", "處處觀音菩薩", "聲聲阿彌陀佛",
+          // 21-40 (背面)
+          "計功", "多少", "量彼", "來處", "忖己", 
+          "德行", "全缺", "應供", "防心", "離過", 
+          "貪等", "為宗", "正事", "良藥", "為療", 
+          "形枯", "為成", "道業", "應受", "此食"
+        ]
+      }
+    };
+
+    // --- 應用程式狀態 ---
+    let selectedLevelId = 1;
+    let playerName = '';
+    let targetIndex = 0;
+    let board = [];
+    let isPlaying = false;
+    let startTime = 0;
+    let animationFrameId = null;
+    let finalElapsedTime = 0;
+
+    // --- 工具函式 ---
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function formatTime(ms) {
+      return (ms / 1000).toFixed(2);
+    }
+
+    // 文字尺寸自適應處理（防止過長字爆格）
+    function getTextSizeClass(text) {
+      const len = text ? text.length : 0;
+      if (len >= 6) return "text-xs sm:text-sm md:text-base lg:text-lg leading-tight px-1";
+      if (len >= 4) return "text-sm sm:text-base md:text-lg lg:text-xl px-1 tracking-tighter";
+      if (len === 3) return "text-base sm:text-xl md:text-2xl lg:text-3xl";
+      if (len === 2) return "text-lg sm:text-2xl md:text-3xl lg:text-4xl tracking-widest";
+      return "text-xl sm:text-2xl md:text-3xl lg:text-4xl";
+    }
+
+    // --- 畫面切換控制 ---
+    function showScreen(screenId) {
+      document.getElementById('screen-lobby').classList.add('hidden');
+      document.getElementById('screen-game').classList.add('hidden');
+      document.getElementById('screen-result').classList.add('hidden');
+
+      const target = document.getElementById(screenId);
+      if (target) {
+        target.classList.remove('hidden');
+        if (screenId === 'screen-game' || screenId === 'screen-lobby') {
+          target.classList.add('flex');
+        } else if (screenId === 'screen-result') {
+          target.classList.add('flex');
+        }
+      }
+    }
+
+    // --- 星星與漂浮粒子生成 ---
+    function initStarField() {
+      const starContainer = document.getElementById('star-container');
+      starContainer.innerHTML = '';
+
+      // 生成 85 顆隨機閃爍白色星點，有不同大小與節奏
+      for (let i = 0; i < 85; i++) {
+        const star = document.createElement('div');
+        const size = Math.random() * 2.8 + 1.6;
+        const top = Math.random() * 100;
+        const left = Math.random() * 100;
+        const duration = Math.random() * 2.5 + 1.8;
+        const delay = Math.random() * 4;
+        const hasExtraGlow = Math.random() > 0.6;
+
+        star.className = 'absolute rounded-full bg-white animate-twinkle pointer-events-none';
+        star.style.top = `${top}%`;
+        star.style.left = `${left}%`;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.boxShadow = hasExtraGlow 
+          ? '0 0 10px 2px rgba(255, 255, 255, 1)' 
+          : '0 0 4px 1px rgba(255, 255, 255, 0.7)';
+        star.style.animationDuration = `${duration}s`;
+        star.style.animationDelay = `${delay}s`;
+        starContainer.appendChild(star);
+      }
+
+      // 生成 18 顆柔和的上升微光球
+      for (let i = 0; i < 18; i++) {
+        const orb = document.createElement('div');
+        const size = Math.random() * 10 + 6;
+        const left = Math.random() * 100;
+        const duration = Math.random() * 10 + 12;
+        const delay = Math.random() * 5;
+
+        orb.className = 'absolute rounded-full bg-blue-200/25 blur-[2px] pointer-events-none';
+        orb.style.left = `${left}%`;
+        orb.style.width = `${size}px`;
+        orb.style.height = `${size}px`;
+        orb.style.animation = `floatParticle ${duration}s linear ${delay}s infinite`;
+        starContainer.appendChild(orb);
+      }
+    }
+
+    // --- 慶祝彩帶生成 ---
+    function triggerConfetti() {
+      const container = document.getElementById('confetti-container');
+      container.innerHTML = '';
+      const colors = ['bg-blue-500', 'bg-indigo-400', 'bg-sky-300', 'bg-white', 'bg-yellow-400'];
+
+      for (let i = 0; i < 60; i++) {
+        const confetti = document.createElement('div');
+        const left = Math.random() * 100;
+        const duration = 3 + Math.random() * 4;
+        const delay = Math.random() * 2;
+        const size = Math.random() * 10 + 5;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const isCircle = Math.random() > 0.5;
+
+        confetti.className = `absolute top-[-10%] ${color} ${isCircle ? 'rounded-full' : 'rounded-sm'} opacity-80`;
+        confetti.style.left = `${left}%`;
+        confetti.style.width = `${size}px`;
+        confetti.style.height = `${size}px`;
+        confetti.style.animation = `confettiFall ${duration}s cubic-bezier(.37,0,.63,1) ${delay}s infinite`;
+        container.appendChild(confetti);
+      }
+    }
+
+    // --- 大廳初始化與關卡按鈕渲染 ---
+    function renderLevelOptions() {
+      const container = document.getElementById('level-options');
+      container.innerHTML = '';
+
+      Object.values(LEVELS).forEach(lvl => {
+        const isSelected = lvl.id === selectedLevelId;
+        const btn = document.createElement('div');
+        btn.className = `cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 flex items-center ${
+          isSelected 
+            ? 'border-blue-400 bg-blue-600/60 shadow-[0_0_18px_rgba(96,165,250,0.6)]' 
+            : 'border-white/20 bg-white/10 hover:bg-white/15 hover:border-white/40'
+        }`;
+
+        btn.innerHTML = `
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center mr-4 ${isSelected ? 'border-white bg-blue-500' : 'border-slate-300'}">
+            ${isSelected ? '<div class="w-2.5 h-2.5 bg-white rounded-full"></div>' : ''}
+          </div>
+          <span class="font-extrabold text-base md:text-lg tracking-wide ${isSelected ? 'text-white' : 'text-slate-100'}">
+            ${lvl.name}
+          </span>
+        `;
+
+        btn.addEventListener('click', () => {
+          selectedLevelId = lvl.id;
+          renderLevelOptions();
+        });
+
+        container.appendChild(btn);
+      });
+    }
+
+    // --- 遊戲計時迴圈 ---
+    function startTimerLoop() {
+      const timerDisplay = document.getElementById('game-timer-display');
+      function update() {
+        if (isPlaying) {
+          const elapsed = Date.now() - startTime;
+          timerDisplay.textContent = formatTime(elapsed);
+          animationFrameId = requestAnimationFrame(update);
+        }
+      }
+      animationFrameId = requestAnimationFrame(update);
+    }
+
+    function stopTimerLoop() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+    }
+
+    // --- 渲染遊戲盤面 ---
+    function renderBoard() {
+      const level = LEVELS[selectedLevelId];
+      const grid = document.getElementById('board-grid');
+      grid.innerHTML = '';
+      
+      // 更新網格配置 (例如: grid-cols-5)
+      grid.className = `grid ${level.gridCols} gap-2 sm:gap-3 h-full w-full mx-auto`;
+
+      board.forEach((tile, index) => {
+        const tileEl = document.createElement('div');
+        const isFirstHalf = tile.itemIndex < level.half;
+        const textContent = tile.isHidden ? '' : level.data[tile.itemIndex];
+        const textSizeClass = getTextSizeClass(textContent);
+
+        let baseClasses = "flex items-center justify-center rounded-xl sm:rounded-2xl shadow-sm font-bold transition-all duration-100 select-none overflow-hidden text-center ";
+        
+        if (tile.isHidden) {
+          baseClasses += "opacity-0 pointer-events-none cursor-default";
+        } else {
+          baseClasses += "cursor-pointer active:scale-95 active:shadow-inner ";
+          if (isFirstHalf) {
+            // 正面樣式 (淺藍底、深藍字、立體邊框)
+            baseClasses += "bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-900 border-b-4 border-blue-300 active:border-b-0 active:translate-y-1 ";
+          } else {
+            // 背面樣式 (深藍底、白字、立體邊框)
+            baseClasses += "bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-b-4 border-blue-800 shadow-[0_4px_10px_rgba(59,130,246,0.3)] active:border-b-0 active:translate-y-1 ";
+          }
+        }
+
+        tileEl.className = `${baseClasses} ${textSizeClass}`;
+        tileEl.textContent = textContent;
+        tileEl.style.webkitTapHighlightColor = 'transparent';
+
+        // 點擊事件
+        tileEl.addEventListener('click', () => handleTileClick(index, tileEl));
+        grid.appendChild(tileEl);
+      });
+    }
+
+    // --- 方塊點擊判定 ---
+    function handleTileClick(index, tileEl) {
+      const tile = board[index];
+      if (tile.isHidden) return;
+
+      const level = LEVELS[selectedLevelId];
+
+      if (tile.itemIndex === targetIndex) {
+        // 正確點擊！
+        if (!isPlaying) {
+          isPlaying = true;
+          startTime = Date.now();
+          startTimerLoop();
+        }
+
+        if (tile.itemIndex < level.half) {
+          // 前半段：翻轉至後半段
+          tile.itemIndex = tile.itemIndex + level.half;
+        } else {
+          // 後半段：消除隱藏
+          tile.isHidden = true;
+        }
+
+        targetIndex++;
+        renderBoard();
+
+        // 判定是否通關
+        if (targetIndex === level.total) {
+          isPlaying = false;
+          finalElapsedTime = Date.now() - startTime;
+          stopTimerLoop();
+          showCelebration();
+        }
+      } else {
+        // 點擊錯誤：觸發紅底與左右震動動畫
+        tileEl.classList.add('bg-red-500', 'text-white', 'animate-shake');
+        setTimeout(() => {
+          tileEl.classList.remove('bg-red-500', 'text-white', 'animate-shake');
+        }, 200);
+      }
+    }
+
+    // --- 開始遊戲 ---
+    function startGame() {
+      const nameInput = document.getElementById('player-name-input');
+      const errorMsg = document.getElementById('error-message');
+      const val = nameInput.value.trim();
+
+      if (!val) {
+        errorMsg.textContent = '請輸入姓名才能開始挑戰！';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+      errorMsg.classList.add('hidden');
+      playerName = val;
+
+      const level = LEVELS[selectedLevelId];
+
+      // 重設計時器與計數
+      targetIndex = 0;
+      isPlaying = false;
+      stopTimerLoop();
+      document.getElementById('game-timer-display').textContent = '0.00';
+      document.getElementById('game-player-display').textContent = playerName;
+      document.getElementById('game-level-display').textContent = level.shortName;
+
+      // 洗牌前半段方塊
+      const initialIndices = Array.from({ length: level.half }, (_, i) => i);
+      const shuffled = shuffleArray(initialIndices);
+      board = shuffled.map(pos => ({
+        itemIndex: pos,
+        isHidden: false
+      }));
+
+      renderBoard();
+      showScreen('screen-game');
+    }
+
+    // --- 慶祝畫面 ---
+    function showCelebration() {
+      const level = LEVELS[selectedLevelId];
+      document.getElementById('result-player-name').textContent = playerName;
+      document.getElementById('result-level-name').textContent = level.name;
+      document.getElementById('result-final-time').innerHTML = `${formatTime(finalElapsedTime)}<span class="text-2xl ml-1 text-blue-200">s</span>`;
+
+      triggerConfetti();
+      showScreen('screen-result');
+    }
+
+    // --- 綁定事件監聽器 ---
+    window.addEventListener('DOMContentLoaded', () => {
+      initStarField();
+      renderLevelOptions();
+
+      // 開始按鈕
+      document.getElementById('btn-start-game').addEventListener('click', startGame);
+
+      // 輸入框 Enter 快速開始
+      document.getElementById('player-name-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') startGame();
+      });
+
+      // 回到大廳按鈕
+      document.getElementById('btn-return-lobby').addEventListener('click', () => {
+        document.getElementById('confetti-container').innerHTML = '';
+        showScreen('screen-lobby');
+      });
+    });
+  </script>
+</body>
+</html>
