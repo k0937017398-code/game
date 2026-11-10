@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>四子棋大對決 - 國三數學《圓》題庫版</title>
+    <style>
+        :root {
+            /* 提亮底色階層，擺脫暗沉 */
+            --bg-dark: #1e293b;
+            --card-bg: rgba(30, 41, 59, 0.88);
+            --card-border: #38bdf8;
+            --p1-color: #ef4444;
+            --p1-glow: rgba(239, 68, 68, 0.45);
+            --p2-color: #facc15;
+            --p2-glow: rgba(250, 204, 21, 0.45);
+            --blue-accent: #0ea5e9;
+            --blue-glow: rgba(14, 165, 233, 0.5);
+            --board-blue: #2563eb;
+            --cell-empty: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            /* 多層次複合背景：交錯微光小白點 + 三向科技擴散光暈 */
+            background-image: 
+                /* 第 1 層：細緻科技小白點 */
+                radial-gradient(circle, rgba(255, 255, 255, 0.32) 1.2px, transparent 1.2px),
+                /* 第 2 層：交錯微亮點，營造星芒立體深度 */
+                radial-gradient(circle, rgba(255, 255, 255, 0.18) 1.5px, transparent 1.5px),
+                /* 第 3 層：頂部天藍色聚光燈 */
+                radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.28) 0%, transparent 60%),
+                /* 第 4 層：右下溫暖光暈 */
+                radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.18) 0%, transparent 50%),
+                /* 第 5 層：左側科技靛藍光暈 */
+                radial-gradient(circle at 15% 45%, rgba(99, 102, 241, 0.22) 0%, transparent 55%),
+                /* 第 6 層：基礎漸層底色提亮 */
+                linear-gradient(150deg, #24334d 0%, #1e293b 60%, #172554 100%);
+            background-size: 
+                28px 28px,
+                56px 56px,
+                100% 100%,
+                100% 100%,
+                100% 100%,
+                100% 100%;
+            background-position: 
+                0 0,
+                14px 14px,
+                center,
+                center,
+                center,
+                center;
+            color: #f8fafc;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .view-screen {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2.5vh 3vw;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 大廳 UI */
+        h1.lobby-title {
+            font-size: clamp(2.2rem, 5vh, 3.2rem);
+            font-weight: 900;
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 2vh;
+            letter-spacing: 2px;
+            text-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+        }
+
+        .lobby-cards-container {
+            display: flex;
+            gap: 2vw;
+            width: 100%;
+            max-width: 1050px;
+            margin: auto 0;
+        }
+
+        .lobby-card {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1.5px solid rgba(56, 189, 248, 0.4);
+            border-radius: 20px;
+            padding: 3vh 2.2vw;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 15px 35px rgba(15, 23, 42, 0.5), 0 0 20px rgba(56, 189, 248, 0.12);
+            backdrop-filter: blur(14px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: clamp(1.3rem, 2.6vh, 1.6rem);
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 2.5vh;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            padding-bottom: 12px;
+        }
+
+        /* 規則卡片內容 */
+        .rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2vh;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            font-size: clamp(1.05rem, 2.1vh, 1.3rem);
+            color: #ffffff;
+            font-weight: 600;
+            line-height: 1.6;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .rule-num {
+            background: var(--blue-accent);
+            color: #ffffff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 900;
+            flex-shrink: 0;
+            margin-top: 2px;
+            box-shadow: 0 0 12px var(--blue-glow);
+        }
+
+        .rules-tags-bar {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-around;
+            color: #38bdf8;
+            font-size: clamp(0.95rem, 1.9vh, 1.15rem);
+            font-weight: 800;
+            margin-top: 2.5vh;
+        }
+
+        /* 設定卡片內容 */
+        .setting-group {
+            margin-bottom: 1.8vh;
+        }
+
+        .setting-label {
+            font-size: clamp(0.85rem, 1.6vh, 1rem);
+            color: #bae6fd;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .toggle-options {
+            display: flex;
+            background: rgba(15, 23, 42, 0.55);
+            padding: 4px;
+            border-radius: 12px;
+            gap: 4px;
+            border: 1px solid rgba(56, 189, 248, 0.15);
+        }
+
+        .opt-chip {
+            flex: 1;
+            text-align: center;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: clamp(0.9rem, 1.7vh, 1.05rem);
+            font-weight: bold;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .opt-chip.active {
+            background: var(--blue-accent);
+            color: #fff;
+            box-shadow: 0 0 12px var(--blue-glow);
+        }
+
+        .name-input-wrap {
+            margin-bottom: 1.5vh;
+        }
+
+        .name-input-wrap label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: clamp(0.85rem, 1.6vh, 1rem);
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .name-input-wrap input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1.5px solid #475569;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: clamp(0.95rem, 1.9vh, 1.1rem);
+            font-weight: bold;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .name-input-wrap input:focus { 
+            border-color: var(--blue-accent); 
+            box-shadow: 0 0 12px rgba(14, 165, 233, 0.35);
+        }
+        .name-input-wrap input:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-start-game {
+            width: 100%;
+            background: linear-gradient(135deg, #0ea5e9 0%, #ec4899 100%);
+            color: #fff;
+            font-size: clamp(1.1rem, 2.3vh, 1.35rem);
+            font-weight: 900;
+            padding: 1.5vh 0;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.45);
+            transition: all 0.2s;
+            margin-top: 1vh;
+        }
+
+        .btn-start-game:active { transform: scale(0.98); }
+
+        /* 賽場 UI */
+        .arena-top-nav {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-nav-icon {
+            background: var(--card-bg);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: clamp(0.85rem, 1.6vh, 0.95rem);
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+        }
+
+        .btn-nav-icon:hover { background: #334155; }
+
+        .turn-status-pill {
+            background: var(--card-bg);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 8px 24px;
+            border-radius: 30px;
+            font-size: clamp(0.95rem, 2vh, 1.15rem);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.3), 0 0 15px rgba(56, 189, 248, 0.15);
+            backdrop-filter: blur(12px);
+        }
+
+        .arena-body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3vw;
+            width: 100%;
+            max-width: 1100px;
+            margin: auto 0;
+        }
+
+        /* 側邊玩家卡片 */
+        .player-side-card {
+            width: 220px;
+            background: var(--card-bg);
+            border: 1.5px solid rgba(56, 189, 248, 0.25);
+            border-radius: 20px;
+            padding: 3vh 1.5vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5vh;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .player-side-card.active-p1 {
+            border-color: var(--p1-color);
+            box-shadow: 0 0 25px var(--p1-glow);
+        }
+
+        .player-side-card.active-p2 {
+            border-color: var(--p2-color);
+            box-shadow: 0 0 25px var(--p2-glow);
+        }
+
+        .side-avatar {
+            width: clamp(60px, 10vh, 90px);
+            height: clamp(60px, 10vh, 90px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.5);
+        }
+
+        .side-avatar.p1-avatar { background: radial-gradient(circle at 35% 35%, #ff6b81, var(--p1-color), #88002d); }
+        .side-avatar.p2-avatar { background: radial-gradient(circle at 35% 35%, #ffe066, var(--p2-color), #886c00); }
+
+        .side-player-tag {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .side-player-name {
+            font-size: clamp(1.1rem, 2.3vh, 1.4rem);
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+        }
+
+        .score-box {
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 12px;
+            padding: 8px 20px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .score-label { font-size: 0.75rem; color: #94a3b8; font-weight: bold; }
+        .score-num { font-size: 1.6rem; font-weight: 900; color: #38bdf8; }
+
+        .status-badge-pill {
+            background: #334155;
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 4px 14px;
+            border-radius: 20px;
+        }
+
+        /* 四子棋棋盤 */
+        .board-wrapper {
+            background: linear-gradient(145deg, #2563eb, #1e40af);
+            border: 4px solid #38bdf8;
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 20px 45px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.35);
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            height: min(60vh, 520px);
+            aspect-ratio: 7 / 6;
+        }
+
+        .board-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            cursor: pointer;
+            border-radius: 12px;
+            padding: 2px;
+            transition: background 0.2s;
+        }
+
+        .board-column:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .board-cell {
+            flex: 1;
+            background: var(--cell-empty);
+            border-radius: 50%;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.7);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .board-cell.p1-chip {
+            background: radial-gradient(circle at 35% 35%, #ff6b81, var(--p1-color), #88002d);
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.4), 0 0 15px var(--p1-glow);
+            animation: dropAnim 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .board-cell.p2-chip {
+            background: radial-gradient(circle at 35% 35%, #ffe066, var(--p2-color), #886c00);
+            box-shadow: inset 0 -4px 8px rgba(0,0,0,0.4), 0 0 15px var(--p2-glow);
+            animation: dropAnim 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .board-cell.winning-cell {
+            animation: winPulse 0.8s infinite alternate;
+        }
+
+        @keyframes dropAnim {
+            0% { transform: translateY(-300px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes winPulse {
+            0% { transform: scale(0.9); box-shadow: 0 0 5px #fff; }
+            100% { transform: scale(1.1); box-shadow: 0 0 25px #fff; }
+        }
+
+        /* 答題 Modal */
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+
+        .modal-mask.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .quiz-card {
+            background: var(--card-bg);
+            border: 2px solid var(--blue-accent);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90vw;
+            max-width: 520px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 25px rgba(56, 189, 248, 0.2);
+            transform: translateY(20px);
+            transition: transform 0.25s ease;
+        }
+
+        .modal-mask.active .quiz-card { transform: translateY(0); }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--blue-accent);
+            width: 100%;
+            transition: width 0.1s linear;
+        }
+
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .quiz-tag {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .quiz-counter { font-size: 0.85rem; color: #94a3b8; }
+
+        .quiz-question {
+            font-size: clamp(1rem, 2.2vh, 1.2rem);
+            line-height: 1.5;
+            color: #f8fafc;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .opt-btn {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: clamp(0.95rem, 1.9vh, 1.05rem);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .opt-btn:hover { background: #0284c7; border-color: #38bdf8; }
+        .opt-btn.correct-ans { background: #16a34a !important; border-color: #22c55e !important; }
+        .opt-btn.wrong-ans { background: #dc2626 !important; border-color: #ef4444 !important; }
+
+        .feedback-banner {
+            margin-top: 14px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .feedback-banner.show { display: block; }
+        .feedback-banner.success { background: #15803d; color: #fff; }
+        .feedback-banner.error { background: #b91c1c; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <!-- 大廳視窗 -->
+    <div class="view-screen" id="lobbyScreen">
+        <h1 class="lobby-title">四子棋大對決</h1>
+
+        <div class="lobby-cards-container">
+            <!-- 左卡：遊戲規則說明 -->
+            <div class="lobby-card">
+                <div>
+                    <div class="card-header">
+                        <span>📖</span> 遊戲規則說明
+                    </div>
+                    <div class="rules-list">
+                        <div class="rule-item">
+                            <div class="rule-num">1</div>
+                            <div>雙方輪流選擇一縱列落子，棋子會受重力掉落至該列最底部。</div>
+                        </div>
+                        <div class="rule-item">
+                            <div class="rule-num">2</div>
+                            <div>率先將自己的 <b style="color:#f43f5e;">4 個棋子連成一線</b>（水平、垂直或斜線）即獲勝！</div>
+                        </div>
+                        <div class="rule-item">
+                            <div class="rule-num">3</div>
+                            <div>若棋盤 42 個格子全滿且無人連成 4 子，則判定為平局。</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="rules-tags-bar">
+                    <span>➔ 水平連線</span>
+                    <span>↓ 垂直連線</span>
+                    <span>↘ 斜線連線</span>
+                </div>
+            </div>
+
+            <!-- 右卡：對戰設定 -->
+            <div class="lobby-card">
+                <div>
+                    <div class="card-header">
+                        <span>⚙️</span> 對戰設定與玩家姓名
+                    </div>
+
+                    <div class="setting-group">
+                        <span class="setting-label">對戰模式</span>
+                        <div class="toggle-options">
+                            <div class="opt-chip active" onclick="setGameMode('pvp', this)">👥 雙人同機</div>
+                            <div class="opt-chip" onclick="setGameMode('ai', this)">🤖 人機對戰</div>
+                        </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <span class="setting-label">⏱️ 答題時間</span>
+                        <div class="toggle-options">
+                            <div class="opt-chip" onclick="setTimeSec(15, this)">15秒</div>
+                            <div class="opt-chip active" onclick="setTimeSec(30, this)">30秒</div>
+                            <div class="opt-chip" onclick="setTimeSec(45, this)">45秒</div>
+                            <div class="opt-chip" onclick="setTimeSec(0, this)">不限時</div>
+                        </div>
+                    </div>
+
+                    <div class="name-input-wrap">
+                        <label style="color: var(--p1-color);">🔴 玩家 1 (紅棋) 姓名</label>
+                        <input type="text" id="p1NameInput" value="紅隊 / 玩家 1" maxlength="10">
+                    </div>
+
+                    <div class="name-input-wrap">
+                        <label style="color: var(--p2-color);">🟡 玩家 2 (黃棋) 姓名</label>
+                        <input type="text" id="p2NameInput" value="黃隊 / 玩家 2" maxlength="10">
+                    </div>
+                </div>
+
+                <button class="btn-start-game" onclick="startGame()">🚀 開始遊戲 (ENTER)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 賽場視窗 -->
+    <div class="view-screen hidden" id="arenaScreen">
+        <div class="arena-top-nav">
+            <button class="btn-nav-icon" onclick="backToLobby()">⌂ 返回大廳</button>
+
+            <div class="turn-status-pill" id="turnPill">
+                <span id="turnColorDot">🔴</span>
+                <span>輪到 [ <span id="turnPlayerName">紅隊 / 玩家 1</span> ] 落子</span>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-nav-icon" onclick="resetBoard()">🔄 重開</button>
+            </div>
+        </div>
+
+        <div class="arena-body">
+            <!-- 左邊紅隊卡片 -->
+            <div class="player-side-card active-p1" id="p1Card">
+                <div class="side-avatar p1-avatar"></div>
+                <div class="side-player-tag">RED PLAYER</div>
+                <div class="side-player-name" id="p1DisplayName">紅隊 / 玩家 1</div>
+                <div class="score-box">
+                    <div class="score-label">得分</div>
+                    <div class="score-num" id="p1Score">0</div>
+                </div>
+                <div class="status-badge-pill" id="p1Status">思考中...</div>
+            </div>
+
+            <!-- 中間 3D 棋盤 -->
+            <div class="board-wrapper" id="boardEl"></div>
+
+            <!-- 右邊黃隊卡片 -->
+            <div class="player-side-card" id="p2Card">
+                <div class="side-avatar p2-avatar"></div>
+                <div class="side-player-tag">YELLOW PLAYER</div>
+                <div class="side-player-name" id="p2DisplayName">黃隊 / 玩家 2</div>
+                <div class="score-box">
+                    <div class="score-label">得分</div>
+                    <div class="score-num" id="p2Score">0</div>
+                </div>
+                <div class="status-badge-pill" id="p2Status">等待中</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 答題 Modal -->
+    <div class="modal-mask" id="quizModal">
+        <div class="quiz-card">
+            <div class="progress-bar-bg" id="progressWrap">
+                <div class="progress-bar-fill" id="progressBar"></div>
+            </div>
+            <div class="quiz-header">
+                <div class="quiz-tag" id="quizTag">紅隊 答題</div>
+                <div class="quiz-counter" id="quizCounter">剩餘 42 題</div>
+            </div>
+            <div class="quiz-question" id="quizQText">題目載入中...</div>
+            <div class="quiz-options" id="quizOpts"></div>
+            <div class="feedback-banner" id="quizFeedback"></div>
+        </div>
+    </div>
+
+    <!-- 結算 Modal -->
+    <div class="modal-mask" id="winModal">
+        <div class="quiz-card" style="text-align: center;">
+            <h2 id="winTitle" style="font-size: 2rem; color: #38bdf8; margin-bottom: 12px;">🎉 遊戲結束</h2>
+            <p id="winDesc" style="font-size: 1.2rem; color: #cbd5e1; margin-bottom: 24px;">紅隊 / 玩家 1 獲勝！</p>
+            <button class="btn-start-game" onclick="closeWinModal(); resetBoard();">再玩一局</button>
+        </div>
+    </div>
+
+    <script>
+        // 嚴格限定 108 課綱國三數學《圓》（2-1、2-2 單元）42 題不重複題庫
+        const questionBank = [
+            { q: "已知圓 O 的半徑為 10，若點 P 到圓心 O 的距離為 7，則點 P 與圓 O 的位置關係為何？", options: ["圓內", "圓上", "圓外", "無法確定"], ans: 0 },
+            { q: "已知圓 O 的半徑為 6，直線 L 與圓心 O 的距離為 6，則直線 L 與圓 O 的交點個數為何？", options: ["0 個", "1 個（相切）", "2 個（割線）", "無限多個"], ans: 1 },
+            { q: "已知圓 O 半徑為 8，直線 L 與圓心 O 的距離為 12，則直線 L 與圓 O 的位置關係為何？", options: ["相切", "相交於兩點", "不相交（相離）", "通過圓心"], ans: 2 },
+            { q: "若劣弧 AB 的度數為 100°，則該弧所對的圓心角 ∠AOB 為多少度？", options: ["50°", "100°", "150°", "200°"], ans: 1 },
+            { q: "若劣弧 AB 的度數為 100°，且 C 點為優弧上任意一點，則圓周角 ∠ACB 為多少度？", options: ["50°", "100°", "150°", "200°"], ans: 0 },
+            { q: "在圓形中，直徑（半圓）所對應的圓周角是多少度？", options: ["45°", "60°", "90°", "180°"], ans: 2 },
+            { q: "四邊形 ABCD 為圓內接四邊形，若 ∠A = 65°，則其對角 ∠C 的度數為何？", options: ["65°", "115°", "125°", "135°"], ans: 1 },
+            { q: "四邊形 ABCD 為圓內接四邊形，若 ∠B = 105°，則其對角 ∠D 的度數為何？", options: ["75°", "85°", "105°", "150°"], ans: 0 },
+            { q: "已知圓 O 上有兩條平行弦截出兩條弧，若其中一弧為 70°，則另一弧的度數是多少度？", options: ["35°", "70°", "110°", "140°"], ans: 1 },
+            { q: "過圓外一點 P 作圓 O 的切線，切點為 A。若圓 O 半徑為 5，OP = 13，求切線段 PA 的長度？", options: ["8", "10", "12", "14"], ans: 2 },
+            { q: "過圓外一點 P 對圓 O 作兩切線 PA、PB，切點為 A、B。若 PA = 8，則切線段 PB 的長度為何？", options: ["4", "8", "12", "16"], ans: 1 },
+            { q: "圓 O 的半徑為 10，弦 AB 的弦心距長度為 6，求弦 AB 的完整長度？", options: ["8", "12", "16", "20"], ans: 2 },
+            { q: "圓 O 中有一條弦長為 24，圓心 O 到該弦的距離（弦心距）為 5，求圓 O 的半徑？", options: ["12", "13", "15", "17"], ans: 1 },
+            { q: "一扇形的半徑為 6 公分，圓心角為 60°，求此扇形的弧長為多少公分？", options: ["π 公分", "2π 公分", "3π 公分", "6π 公分"], ans: 1 },
+            { q: "一扇形的半徑為 12 公分，圓心角為 90°，求此扇形的面積為多少平方公分？", options: ["18π", "24π", "36π", "72π"], ans: 2 },
+            { q: "過圓外一點 P 對圓 O 作兩條切線 PA、PB，A、B 為切點。若切線夾角 ∠APB = 40°，求圓心角 ∠AOB 的度數？", options: ["40°", "80°", "140°", "160°"], ans: 2 },
+            { q: "一扇形的半徑為 10 公分，弧長為 4π 公分，求此扇形的圓心角為多少度？", options: ["36°", "72°", "108°", "144°"], ans: 1 },
+            { q: "一扇形的半徑為 6 公分，弧長為 3π 公分，求此扇形的面積為多少平方公分？", options: ["9π", "12π", "18π", "36π"], ans: 0 },
+            { q: "已知圓 O 的半徑為 R，一正三角形頂點皆在圓上，若圓心到一邊的距離為 3，則半徑 R 為多少？", options: ["3", "6", "9", "3√3"], ans: 1 },
+            { q: "圓 O 中，弦 AB 的長度等於半徑 R，求弦 AB 所對的圓心角 ∠AOB 的度數？", options: ["30°", "45°", "60°", "90°"], ans: 2 },
+            { q: "圓 O 中，弦 AB 的長度等於半徑 R，求該弦所對的優弧圓周角的度數？", options: ["30°", "60°", "120°", "150°"], ans: 0 },
+            { q: "已知圓外一點 P 到圓 O 的最近距離為 4，最遠距離為 16，求圓 O 的半徑為何？", options: ["6", "8", "10", "12"], ans: 0 },
+            { q: "已知直線 L 與圓 O 相切於 A 點，若 ∠BAC 為弦切角，且其所夾劣弧 AC 為 110°，求 ∠BAC 的度數？", options: ["55°", "110°", "165°", "220°"], ans: 0 },
+            { q: "四邊形 ABCD 為圓外切四邊形，若 AB = 7, BC = 9, CD = 8，求 AD 的長度為何？", options: ["6", "7", "8", "10"], ans: 0 },
+            { q: "一弓形由圓心角 90°、半徑 4 公分的扇形扣除三角形而成，求此弓形的面積？", options: ["4π - 8", "4π - 16", "8π - 8", "16π - 8"], ans: 0 },
+            { q: "在圓 O 中，若劣弧 AB 的度數是劣弧 CD 度數的 2 倍，則弦 AB 長與弦 CD 長的關係為何？", options: ["弦 AB = 2 × 弦 CD", "弦 AB < 2 × 弦 CD", "弦 AB > 2 × 弦 CD", "無法比較"], ans: 1 },
+            { q: "已知圓 O 半徑為 5，點 A、B 在圓 O 上，若 ∠AOB = 90°，求弦 AB 的長度？", options: ["5", "5√2", "10", "10√2"], ans: 1 },
+            { q: "平面上，經過不在同一直線上的三個點，可以畫出幾個圓？", options: ["恰好 1 個", "2 個", "無限多個", "0 個"], ans: 0 },
+            { q: "大圓與小圓為同心圓，大圓的一條弦 AB 長度為 16 公分且與小圓相切，求兩圓圍成的圓環面積？", options: ["16π", "32π", "64π", "128π"], ans: 2 },
+            { q: "已知圓 O 半徑為 13，圓心到兩弦 AB 與 CD 的距離分別為 5 與 12，請問哪一條弦比較長？", options: ["弦 AB 較長", "弦 CD 較長", "兩弦一樣長", "無法比較"], ans: 0 },
+            { q: "圓 O 半徑為 15，弦 AB = 24，弦 CD = 18，比較兩弦到圓心的距離 d1 與 d2 的大小關係？", options: ["d1 < d2", "d1 = d2", "d1 > d2", "無法比較"], ans: 0 },
+            { q: "若圓心角 ∠AOB = 120°，圓半徑為 6，求此扇形的周長為多少？", options: ["2π + 12", "4π + 12", "6π + 12", "4π + 6"], ans: 1 },
+            { q: "若圓周角 ∠ACB = 40°，則劣弧 AB 所對的圓心角 ∠AOB 是多少度？", options: ["20°", "40°", "80°", "160°"], ans: 2 },
+            { q: "圓 O 中，已知劣弧 AB 為 80°，若 P 點在劣弧 AB 上，則圓周角 ∠APB 的度數是多少度？", options: ["40°", "80°", "140°", "160°"], ans: 2 },
+            { q: "圓 O 中，若 A, B, C, D 依序在圓上，已知弧 AB = 60°, 弧 BC = 80°, 弧 CD = 100°，求 ∠ADC 的度數？", options: ["60°", "70°", "80°", "140°"], ans: 1 },
+            { q: "已知圓 O 半徑為 5，切線 PA 切圓 O 於 A，若 PA = 12，則 P 點到圓 O 的最近距離是多少？", options: ["5", "8", "12", "13"], ans: 1 },
+            { q: "四邊形 ABCD 內接於圓 O，若 ∠A : ∠C = 2 : 3，求 ∠A 的度數為何？", options: ["72°", "108°", "120°", "144°"], ans: 0 },
+            { q: "圓 O 中有兩弦 AB 與 CD 平行，若弧 AC = 50°，則弧 BD 的度數是多少度？", options: ["25°", "50°", "100°", "130°"], ans: 1 },
+            { q: "若一扇形面積為 12π 平方公分，半徑為 6 公分，則此扇形的弧長為多少公分？", options: ["2π 公分", "4π 公分", "6π 公分", "12π 公分"], ans: 1 },
+            { q: "已知圓 O 半徑為 8，劣弧 AB 的長度為 4π，則弧 AB 所對的圓心角是多少度？", options: ["45°", "60°", "90°", "120°"], ans: 2 },
+            { q: "圓外一點 P 作圓 O 的兩切線，切點為 A、B，若 PA = 10，切線角 ∠APB = 60°，求弦 AB 長度？", options: ["5", "10", "10√3", "20"], ans: 1 },
+            { q: "圓 O 中，直徑 AB 與弦 CD 垂直相交於 M 點。若 CD = 16，AM = 4，求圓 O 的半徑為何？", options: ["6", "8", "10", "12"], ans: 2 }
+        ];
+
+        const ROWS = 6;
+        const COLS = 7;
+        let boardState = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+        let availableQuestions = [];
+        let currentPlayer = 1; // 1: Red, 2: Yellow
+        let gameMode = 'pvp'; // 'pvp' or 'ai'
+        let timeLimitSec = 30; // 預設 30 秒
+        let p1Score = 0;
+        let p2Score = 0;
+        let targetCol = null;
+        let timer = null;
+        let timeLeft = 30;
+        let isAnswering = false;
+
+        function getPlayerName(p) {
+            if (p === 2 && gameMode === 'ai') return '🤖 電腦 AI';
+            const id = p === 1 ? 'p1NameInput' : 'p2NameInput';
+            const val = document.getElementById(id).value.trim();
+            return val ? val : (p === 1 ? '紅隊 / 玩家 1' : '黃隊 / 玩家 2');
+        }
+
+        function setGameMode(mode, el) {
+            gameMode = mode;
+            const chips = el.parentElement.querySelectorAll('.opt-chip');
+            chips.forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+
+            const p2Input = document.getElementById('p2NameInput');
+            if (mode === 'ai') {
+                p2Input.value = '🤖 電腦 AI';
+                p2Input.disabled = true;
+            } else {
+                p2Input.value = '黃隊 / 玩家 2';
+                p2Input.disabled = false;
+            }
+        }
+
+        function setTimeSec(sec, el) {
+            timeLimitSec = sec;
+            const chips = el.parentElement.querySelectorAll('.opt-chip');
+            chips.forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function shuffleArray(arr) {
+            let res = [...arr];
+            for (let i = res.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [res[i], res[j]] = [res[j], res[i]];
+            }
+            return res;
+        }
+
+        function startGame() {
+            document.getElementById('lobbyScreen').classList.add('hidden');
+            document.getElementById('arenaScreen').classList.remove('hidden');
+
+            document.getElementById('p1DisplayName').innerText = getPlayerName(1);
+            document.getElementById('p2DisplayName').innerText = getPlayerName(2);
+
+            availableQuestions = shuffleArray(questionBank);
+            resetBoard();
+        }
+
+        function backToLobby() {
+            document.getElementById('arenaScreen').classList.add('hidden');
+            document.getElementById('lobbyScreen').classList.remove('hidden');
+            clearInterval(timer);
+        }
+
+        function resetBoard() {
+            boardState = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+            currentPlayer = 1;
+            isAnswering = false;
+            updateTurnUI();
+
+            const boardEl = document.getElementById('boardEl');
+            boardEl.innerHTML = '';
+
+            for (let c = 0; c < COLS; c++) {
+                const colEl = document.createElement('div');
+                colEl.className = 'board-column';
+                colEl.onclick = () => onColumnClick(c);
+
+                for (let r = 0; r < ROWS; r++) {
+                    const cellEl = document.createElement('div');
+                    cellEl.className = 'board-cell';
+                    cellEl.id = `cell-${r}-${c}`;
+                    colEl.appendChild(cellEl);
+                }
+                boardEl.appendChild(colEl);
+            }
+        }
+
+        function updateTurnUI() {
+            const name = getPlayerName(currentPlayer);
+            document.getElementById('turnColorDot').innerText = currentPlayer === 1 ? '🔴' : '🟡';
+            document.getElementById('turnPlayerName').innerText = name;
+
+            const p1Card = document.getElementById('p1Card');
+            const p2Card = document.getElementById('p2Card');
+            const p1Status = document.getElementById('p1Status');
+            const p2Status = document.getElementById('p2Status');
+
+            if (currentPlayer === 1) {
+                p1Card.classList.add('active-p1');
+                p2Card.classList.remove('active-p2');
+                p1Status.innerText = '思考中...';
+                p2Status.innerText = '等待中';
+            } else {
+                p2Card.classList.add('active-p2');
+                p1Card.classList.remove('active-p1');
+                p2Status.innerText = gameMode === 'ai' ? 'AI 計算中...' : '思考中...';
+                p1Status.innerText = '等待中';
+
+                if (gameMode === 'ai') {
+                    isAnswering = true;
+                    setTimeout(triggerAiMove, 1000);
+                }
+            }
+        }
+
+        function onColumnClick(col) {
+            if (isAnswering) return;
+            if (boardState[0][col] !== 0) {
+                alert("該直行已滿，請選擇別列！");
+                return;
+            }
+            targetCol = col;
+            openQuizModal();
+        }
+
+        /* AI 思考與自動落子邏輯 */
+        function triggerAiMove() {
+            let aiCol = getAiBestMove();
+            dropChip(aiCol);
+            isAnswering = false;
+        }
+
+        function getLowestAvailableRow(c) {
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (boardState[r][c] === 0) return r;
+            }
+            return -1;
+        }
+
+        function getAiBestMove() {
+            for (let c = 0; c < COLS; c++) {
+                let r = getLowestAvailableRow(c);
+                if (r !== -1) {
+                    boardState[r][c] = 2;
+                    let wins = checkWinSilent(r, c, 2);
+                    boardState[r][c] = 0;
+                    if (wins) return c;
+                }
+            }
+            for (let c = 0; c < COLS; c++) {
+                let r = getLowestAvailableRow(c);
+                if (r !== -1) {
+                    boardState[r][c] = 1;
+                    let blocks = checkWinSilent(r, c, 1);
+                    boardState[r][c] = 0;
+                    if (blocks) return c;
+                }
+            }
+            const centerOrder = [3, 2, 4, 1, 5, 0, 6];
+            for (let c of centerOrder) {
+                if (boardState[0][c] === 0) return c;
+            }
+            return 0;
+        }
+
+        function checkWinSilent(r, c, player) {
+            const dirs = [
+                [[0, 1], [0, -1]],   // 水平
+                [[1, 0], [-1, 0]],   // 垂直
+                [[1, 1], [-1, -1]],  // 斜對角 \
+                [[1, -1], [-1, 1]]   // 斜對角 /
+            ];
+
+            for (let dir of dirs) {
+                let count = 1;
+                for (let [dr, dc] of dir) {
+                    let nr = r + dr;
+                    let nc = c + dc;
+                    while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && boardState[nr][nc] === player) {
+                        count++;
+                        nr += dr;
+                        nc += dc;
+                    }
+                }
+                if (count >= 4) return true;
+            }
+            return false;
+        }
+
+        function openQuizModal() {
+            isAnswering = true;
+            const modal = document.getElementById('quizModal');
+            const tag = document.getElementById('quizTag');
+            const counter = document.getElementById('quizCounter');
+            const qText = document.getElementById('quizQText');
+            const optsEl = document.getElementById('quizOpts');
+            const feedback = document.getElementById('quizFeedback');
+            const progressWrap = document.getElementById('progressWrap');
+
+            feedback.className = 'feedback-banner';
+            feedback.innerText = '';
+
+            if (availableQuestions.length === 0) {
+                availableQuestions = shuffleArray(questionBank);
+            }
+
+            const qObj = availableQuestions.pop();
+            const name = getPlayerName(currentPlayer);
+
+            tag.innerText = `${currentPlayer === 1 ? '🔴' : '🟡'} ${name} 作答`;
+            tag.style.background = currentPlayer === 1 ? 'var(--p1-color)' : 'var(--p2-color)';
+
+            counter.innerText = `剩餘可用題目：${availableQuestions.length} 題`;
+            qText.innerText = qObj.q;
+
+            optsEl.innerHTML = '';
+            qObj.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'opt-btn';
+                btn.innerHTML = `<span style="font-weight:bold; width:28px;">${['A','B','C','D'][idx]}.</span> ${opt}`;
+                btn.onclick = () => handleAnswer(idx, qObj.ans, btn);
+                optsEl.appendChild(btn);
+            });
+
+            if (timeLimitSec === 0) {
+                progressWrap.style.display = 'none';
+            } else {
+                progressWrap.style.display = 'block';
+                startTimer();
+            }
+
+            modal.classList.add('active');
+        }
+
+        function startTimer() {
+            timeLeft = timeLimitSec;
+            const bar = document.getElementById('progressBar');
+            bar.style.width = '100%';
+            bar.style.background = 'var(--blue-accent)';
+
+            clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft -= 0.1;
+                const pct = (timeLeft / timeLimitSec) * 100;
+                bar.style.width = `${pct}%`;
+
+                if (timeLeft <= 5) bar.style.background = '#ef4444';
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeOutHandler();
+                }
+            }, 100);
+        }
+
+        function handleAnswer(selectedIdx, correctIdx, btnEl) {
+            clearInterval(timer);
+            const feedback = document.getElementById('quizFeedback');
+            const allBtns = document.querySelectorAll('.opt-btn');
+            allBtns.forEach(b => b.style.pointerEvents = 'none');
+
+            if (selectedIdx === correctIdx) {
+                btnEl.classList.add('correct-ans');
+                feedback.innerText = "✨ 回答正確！成功落子！";
+                feedback.className = 'feedback-banner success show';
+                setTimeout(() => {
+                    closeQuizModal();
+                    dropChip(targetCol);
+                }, 900);
+            } else {
+                btnEl.classList.add('wrong-ans');
+                allBtns[correctIdx].classList.add('correct-ans');
+                feedback.innerText = "❌ 回答錯誤！喪失本回合落子權！";
+                feedback.className = 'feedback-banner error show';
+                setTimeout(() => {
+                    closeQuizModal();
+                    switchTurn();
+                }, 1400);
+            }
+        }
+
+        function timeOutHandler() {
+            const feedback = document.getElementById('quizFeedback');
+            feedback.innerText = "⏰ 時間到！喪失本回合落子權！";
+            feedback.className = 'feedback-banner error show';
+            setTimeout(() => {
+                closeQuizModal();
+                switchTurn();
+            }, 1400);
+        }
+
+        function closeQuizModal() {
+            document.getElementById('quizModal').classList.remove('active');
+            isAnswering = false;
+        }
+
+        function dropChip(col) {
+            let r = ROWS - 1;
+            while (r >= 0 && boardState[r][col] !== 0) {
+                r--;
+            }
+
+            if (r >= 0) {
+                boardState[r][col] = currentPlayer;
+                const cell = document.getElementById(`cell-${r}-${col}`);
+                cell.classList.add(currentPlayer === 1 ? 'p1-chip' : 'p2-chip');
+
+                if (checkWin(r, col)) {
+                    if (currentPlayer === 1) p1Score++; else p2Score++;
+                    document.getElementById('p1Score').innerText = p1Score;
+                    document.getElementById('p2Score').innerText = p2Score;
+                    setTimeout(() => showWinModal(currentPlayer), 300);
+                } else if (checkDraw()) {
+                    setTimeout(() => showWinModal(0), 300);
+                } else {
+                    switchTurn();
+                }
+            }
+        }
+
+        function switchTurn() {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateTurnUI();
+        }
+
+        function checkWin(r, c) {
+            const p = boardState[r][c];
+            const dirs = [
+                [[0, 1], [0, -1]],   // 水平
+                [[1, 0], [-1, 0]],   // 垂直
+                [[1, 1], [-1, -1]],  // 斜對角 \
+                [[1, -1], [-1, 1]]   // 斜對角 /
+            ];
+
+            for (let dir of dirs) {
+                let count = 1;
+                let winningCells = [[r, c]];
+
+                for (let [dr, dc] of dir) {
+                    let nr = r + dr;
+                    let nc = c + dc;
+                    while (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS && boardState[nr][nc] === p) {
+                        count++;
+                        winningCells.push([nr, nc]);
+                        nr += dr;
+                        nc += dc;
+                    }
+                }
+
+                if (count >= 4) {
+                    winningCells.forEach(([wr, wc]) => {
+                        document.getElementById(`cell-${wr}-${wc}`).classList.add('winning-cell');
+                    });
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkDraw() {
+            return boardState[0].every(cell => cell !== 0);
+        }
+
+        function showWinModal(winner) {
+            const modal = document.getElementById('winModal');
+            const title = document.getElementById('winTitle');
+            const desc = document.getElementById('winDesc');
+
+            if (winner === 0) {
+                title.innerText = "🤝 平局結算！";
+                desc.innerText = "棋盤 42 格已填滿，雙方勢均力敵！";
+            } else {
+                const name = getPlayerName(winner);
+                title.innerText = `🎉 恭喜獲勝！`;
+                desc.innerText = winner === 1 ? `🔴 ${name} 贏得勝利！` : `🟡 ${name} 贏得勝利！`;
+            }
+            modal.classList.add('active');
+        }
+
+        function closeWinModal() {
+            document.getElementById('winModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
